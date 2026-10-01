@@ -2,3 +2,7 @@
 # will have compiled files and executables
 /target/
 /gen/schemas
+
+# Native mpv libraries, fetched via `npx tauri-plugin-libmpv-api setup-lib`
+# (too large for git; see README for setup instructions)
+/lib/

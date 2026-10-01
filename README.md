@@ -1,32 +1,30 @@
-# React + TypeScript + Vite
+# LibreVP
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Lecteur vidéo de bureau (Tauri + React/TypeScript), moteur [mpv](https://mpv.io/)
+embarqué via [`tauri-plugin-libmpv`](https://github.com/nini22P/tauri-plugin-libmpv)
+— lit nativement à peu près tout ce que mpv lit (HEVC/x265, HDR, MKV, AV1, ...),
+contrairement à un simple `<video>` HTML limité aux codecs de la WebView.
 
-Currently, two official plugins are available:
+## Setup (après clone)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npx tauri-plugin-libmpv-api setup-lib   # télécharge libmpv-2.dll + le wrapper dans src-tauri/lib/
+npm run tauri build -- --debug          # ou: npm run tauri dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Les DLL natives (`src-tauri/lib/`) ne sont pas versionnées (trop lourdes,
+~100 Mo) — `setup-lib` les retélécharge à chaque nouveau clone.
+
+## Stack
+
+- Frontend : React 19 + TypeScript, Vite 8
+- Backend : Tauri 2, `tauri-plugin-libmpv` (lecture vidéo), `tauri-plugin-dialog`
+  (sélection de fichier)
+- La fenêtre est transparente ; mpv compose sa surface vidéo nativement
+  derrière la WebView, les contrôles HTML flottent par-dessus en overlay.
+
+## Développement
+
+Template de base : React + TypeScript + Vite (voir
+[vite.dev](https://vite.dev) pour les options HMR/lint génériques).

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "vidra",
+  "productName": "LibreVP",
   "version": "0.1.0",
-  "identifier": "dev.libreflow.vidra",
+  "identifier": "dev.libreflow.librevp",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,11 +12,12 @@
   "app": {
     "windows": [
       {
-        "title": "Vidra",
-        "width": 800,
-        "height": 600,
+        "title": "LibreVP",
+        "width": 1100,
+        "height": 700,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "transparent": true
       }
     ],
     "security": {
@@ -26,6 +27,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": [
+      "lib/**/*"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
