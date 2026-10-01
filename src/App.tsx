@@ -43,6 +43,21 @@ const VIDEO_EXTENSIONS = [
   'mp4', 'mkv', 'avi', 'mov', 'webm', 'm4v', 'flv', 'wmv', 'ts', 'mpg', 'mpeg',
 ]
 
+const VIDEO_EXTENSION_SET = new Set(VIDEO_EXTENSIONS)
+
+function hasVideoExtension(path: string): boolean {
+  const dot = path.lastIndexOf('.')
+  if (dot === -1) return false
+  return VIDEO_EXTENSION_SET.has(path.slice(dot + 1).toLowerCase())
+}
+
+// When several files are dropped at once, prefer the first one that looks
+// like a video instead of blindly taking paths[0] (which may be a subtitle
+// or artwork file dropped alongside the movie).
+function pickSupportedFile(paths: string[]): string | null {
+  return paths.find((p) => hasVideoExtension(p)) ?? paths[0] ?? null
+}
+
 function App() {
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -105,7 +120,12 @@ function App() {
     return () => {
       cancelled = true
       unlisten?.()
-      void destroy()
+      // Only destroy when init actually completed; otherwise a StrictMode
+      // double-mount would call destroy() on an uninitialized player.
+      if (readyRef.current) {
+        readyRef.current = false
+        void destroy().catch(() => {})
+      }
     }
   }, [])
 
@@ -149,8 +169,8 @@ function App() {
         if (event.payload.type === 'leave') setIsDragOver(false)
         if (event.payload.type === 'drop') {
           setIsDragOver(false)
-          const first = event.payload.paths[0]
-          if (first && readyRef.current) void loadFile(first)
+          const path = pickSupportedFile(event.payload.paths)
+          if (path && readyRef.current) void loadFile(path)
         }
       })
     })()
@@ -211,6 +231,9 @@ function App() {
     function onKeyDown(e: KeyboardEvent) {
       // Don't hijack typing in a focused input (e.g. a future search box).
       if (e.target instanceof HTMLInputElement) return
+      // Let Space activate a focused button natively instead of also firing
+      // the play/pause shortcut (double action on a single keypress).
+      if (e.key === ' ' && e.target instanceof HTMLButtonElement) return
       switch (e.key) {
         case ' ':
         case 'k':
