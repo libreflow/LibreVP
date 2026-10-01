@@ -3,8 +3,8 @@ name = "librevp"
 version = "0.1.0"
 description = "LibreVP - a video player Tauri App"
 authors = ["libreflow"]
-license = ""
-repository = ""
+license = "MIT"
+repository = "https://github.com/libreflow/LibreVP"
 edition = "2024"
 rust-version = "1.90"
 
