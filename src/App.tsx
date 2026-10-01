@@ -26,12 +26,17 @@ const OBSERVED_PROPERTIES = [
 // bar never overlaps the picture itself.
 const CONTROLS_MARGIN_RATIO = 0.1
 
+const MAX_VOLUME = 130
+
 function formatTime(seconds: number | null): string {
   if (seconds == null || Number.isNaN(seconds)) return '--:--'
   const total = Math.floor(seconds)
-  const m = Math.floor(total / 60)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
   const s = total % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
+  const mm = h > 0 ? m.toString().padStart(2, '0') : `${m}`
+  const ss = s.toString().padStart(2, '0')
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
 const VIDEO_EXTENSIONS = [
@@ -229,7 +234,7 @@ function App() {
           break
         case 'ArrowUp':
           e.preventDefault()
-          void setProperty('volume', Math.min(130, volume + 5))
+          void setProperty('volume', Math.min(MAX_VOLUME, volume + 5))
           break
         case 'ArrowDown':
           e.preventDefault()
@@ -252,6 +257,7 @@ function App() {
       onClick={hasMedia ? togglePause : undefined}
       onDoubleClick={hasMedia ? toggleFullscreen : undefined}
     >
+      {error && <div className="error-banner error-banner--overlay">{error}</div>}
       {isDragOver && (
         <div className="drag-overlay">Déposer la vidéo pour la lire</div>
       )}
@@ -259,7 +265,6 @@ function App() {
       {!hasMedia && (
         <div className="drop-zone">
           <div className="drop-zone__title">LibreVP</div>
-          {error && <div className="error-banner">{error}</div>}
           <button
             type="button"
             className="open-btn"
@@ -306,7 +311,7 @@ function App() {
               type="range"
               className="volume-bar"
               min={0}
-              max={130}
+              max={MAX_VOLUME}
               value={volume}
               onChange={onVolumeChange}
             />

@@ -55,6 +55,14 @@
   text-align: center;
 }
 
+.error-banner--overlay {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
 .controls {
   position: absolute;
   left: 0;
