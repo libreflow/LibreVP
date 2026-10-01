@@ -1,6 +1,27 @@
 :root {
   color-scheme: dark;
   font: 14px/1.4 system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* Design tokens */
+  --color-bg: #15151a;
+  --color-bg-overlay: rgba(10, 10, 14, 0.88);
+  --color-text: #e6e6ea;
+  --color-text-muted: #b7b7c2;
+  --color-text-faint: #8b8b96;
+  --color-accent: #6c4bff;
+  --color-accent-hover: #7d5fff;
+  --color-accent-soft: rgba(108, 75, 255, 0.25);
+  --color-error: #ff9b9b;
+  --color-error-bg: rgba(220, 60, 60, 0.15);
+  --color-error-border: rgba(220, 60, 60, 0.4);
+  --color-track: rgba(255, 255, 255, 0.22);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+
+  --transition-fast: 0.15s ease;
+
+  --controls-hide-delay: 2600ms;
 }
 
 html,
@@ -25,4 +46,13 @@ body {
 button {
   font: inherit;
   cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
