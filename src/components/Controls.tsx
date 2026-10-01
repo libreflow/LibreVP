@@ -22,6 +22,13 @@ export function Controls(props: ControlsProps) {
     togglePause, toggleFullscreen, setVolume, onOpenFile,
     onSeekChange, onSeekCommit, seekingRef, timePos, duration,
   } = props
+
+  const seekFillPercent = duration != null && duration > 0
+    ? `${Math.min(100, Math.max(0, ((timePos ?? 0) / duration) * 100))}%`
+    : '0%'
+  const volumeFillPercent = `${Math.min(100, Math.max(0, (volume / MAX_VOLUME) * 100))}%`
+
+  const fillStyle = (fill: string) => ({ '--fill': fill }) as React.CSSProperties
   return (
     <div className="controls" onClick={(e) => e.stopPropagation()}>
       <div className="seek-row">
@@ -33,6 +40,7 @@ export function Controls(props: ControlsProps) {
           max={duration ?? 0}
           step={0.1}
           value={timePos ?? 0}
+          style={fillStyle(seekFillPercent)}
           onChange={(e) => {
             seekingRef.current = true
             onSeekChange(Number(e.target.value))
@@ -61,6 +69,7 @@ export function Controls(props: ControlsProps) {
             max={MAX_VOLUME}
             value={volume}
             onChange={(e) => setVolume(Number(e.target.value))}
+            style={fillStyle(volumeFillPercent)}
           />
         </div>
         <span className="filename">{filename ?? ''}</span>
