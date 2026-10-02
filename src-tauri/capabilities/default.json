@@ -8,7 +8,24 @@
   "permissions": [
     "core:default",
     "core:window:allow-set-fullscreen",
+    "core:window:allow-destroy",
     "libmpv:default",
-    "dialog:default"
+    "dialog:default",
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "$APPCONFIG/*" }]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$APPCONFIG/*" }]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "$APPCONFIG" }, { "path": "$APPCONFIG/*" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$APPCONFIG" }, { "path": "$APPCONFIG/*" }]
+    }
   ]
 }
