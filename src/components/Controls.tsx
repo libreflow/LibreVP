@@ -1,4 +1,5 @@
-import { formatTime, MAX_VOLUME } from '../utils'
+import { SeekBar } from './controls/SeekBar'
+import { VolumeControl } from './controls/VolumeControl'
 
 interface ControlsProps {
   paused: boolean
@@ -22,34 +23,15 @@ export function Controls(props: ControlsProps) {
     togglePause, toggleFullscreen, setVolume, onOpenFile,
     onSeekChange, onSeekCommit, seekingRef, timePos, duration,
   } = props
-
-  const seekFillPercent = duration != null && duration > 0
-    ? `${Math.min(100, Math.max(0, ((timePos ?? 0) / duration) * 100))}%`
-    : '0%'
-  const volumeFillPercent = `${Math.min(100, Math.max(0, (volume / MAX_VOLUME) * 100))}%`
-
-  const fillStyle = (fill: string) => ({ '--fill': fill }) as React.CSSProperties
   return (
     <div className="controls" onClick={(e) => e.stopPropagation()}>
-      <div className="seek-row">
-        <span className="time">{formatTime(timePos)}</span>
-        <input
-          type="range"
-          className="seek-bar"
-          min={0}
-          max={duration ?? 0}
-          step={0.1}
-          value={timePos ?? 0}
-          style={fillStyle(seekFillPercent)}
-          onChange={(e) => {
-            seekingRef.current = true
-            onSeekChange(Number(e.target.value))
-          }}
-          onMouseUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
-          onKeyUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
-        />
-        <span className="time">{formatTime(duration)}</span>
-      </div>
+      <SeekBar
+        timePos={timePos}
+        duration={duration}
+        seekingRef={seekingRef}
+        onSeekChange={onSeekChange}
+        onSeekCommit={onSeekCommit}
+      />
       <div className="bottom-row">
         <button type="button" className="icon-btn" onClick={togglePause} aria-label={paused ? 'Lecture' : 'Pause'}>
           {paused ? (
@@ -58,20 +40,7 @@ export function Controls(props: ControlsProps) {
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
           )}
         </button>
-        <div className="volume-row">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-            <path d="M3 10v4h4l5 5V5L7 10H3z" />
-          </svg>
-          <input
-            type="range"
-            className="volume-bar"
-            min={0}
-            max={MAX_VOLUME}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            style={fillStyle(volumeFillPercent)}
-          />
-        </div>
+        <VolumeControl volume={volume} setVolume={setVolume} />
         <span className="filename">{filename ?? ''}</span>
         <button type="button" className="icon-btn" onClick={(e) => { e.stopPropagation(); toggleFullscreen() }} aria-label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}>
           {isFullscreen ? (
