@@ -4,18 +4,29 @@ import { usePlayer } from './hooks/usePlayer'
 import { useKeyboardShortcuts, useFullscreen, useControlsVisibility } from './hooks/useShortcuts'
 import { useFilePicker } from './hooks/useFilePicker'
 import { useFileAssociation } from './hooks/useFileAssociation'
+import { useSubtitles } from './hooks/useSubtitles'
+import { usePlaylist } from './hooks/usePlaylist'
 import { Controls } from './components/Controls'
+import { PlaylistPanel } from './components/PlaylistPanel'
 import './App.css'
 
 function App() {
   const { showControls, onPointerActivity } = useControlsVisibility()
-  const player = usePlayer(showControls)
+  const subtitles = useSubtitles()
+  const player = usePlayer(showControls, (path) => void subtitles.onFileLoaded(path))
   const [error, setError] = useState<string | null>(null)
-
   const onError = useCallback((msg: string) => setError(msg), [])
   const { isFullscreen, toggleFullscreen } = useFullscreen(onError)
   const { isDragOver, openFile } = useFilePicker({
     readyRef: player.readyRef,
+    loadFile: player.loadFile,
+    onFilesDropped: (paths) => {
+      if (player.readyRef.current) playlist.append(paths)
+    },
+    onError,
+  })
+  const playlist = usePlaylist({
+    ready: player.ready,
     loadFile: player.loadFile,
     onError,
   })
@@ -33,6 +44,10 @@ function App() {
     isFullscreen,
     togglePause: player.togglePause,
     toggleFullscreen,
+    toggleSubtitles: subtitles.toggle,
+    playNext: playlist.playNext,
+    playPrevious: playlist.playPrevious,
+    togglePlaylist: () => playlist.setPanelOpen(!playlist.panelOpen),
   })
 
   const onSeekCommit = useCallback((t: number) => {
@@ -72,15 +87,33 @@ function App() {
         </div>
       )}
 
+      <PlaylistPanel
+        open={playlist.panelOpen}
+        queue={playlist.queue}
+        currentIndex={playlist.currentIndex}
+        onPlay={(i) => void playlist.playIndex(i)}
+        onRemove={playlist.removeAt}
+        onClear={playlist.clear}
+        onClose={() => playlist.setPanelOpen(false)}
+      />
+
       <Controls
         paused={player.paused}
         volume={player.volume}
         filename={player.filename}
         isFullscreen={isFullscreen}
+        subtitlesAvailable={subtitles.available}
+        subtitlesVisible={subtitles.visible}
+        onToggleSubtitles={() => void subtitles.toggle()}
+        hasNext={playlist.currentIndex < playlist.queue.length - 1}
+        hasPrevious={playlist.currentIndex > 0}
+        onPlayNext={playlist.playNext}
+        onPlayPrevious={playlist.playPrevious}
+        onOpenFile={() => void openFile()}
+        onTogglePlaylist={() => playlist.setPanelOpen(!playlist.panelOpen)}
         togglePause={player.togglePause}
         toggleFullscreen={toggleFullscreen}
         setVolume={player.setVolume}
-        onOpenFile={() => void openFile()}
         onSeekChange={player.setTimePos}
         onSeekCommit={onSeekCommit}
         seekingRef={player.seekingRef}

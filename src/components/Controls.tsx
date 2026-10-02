@@ -6,10 +6,18 @@ interface ControlsProps {
   volume: number
   filename: string | null
   isFullscreen: boolean
+  subtitlesAvailable: boolean
+  subtitlesVisible: boolean
+  hasNext: boolean
+  hasPrevious: boolean
+  onToggleSubtitles: () => void
+  onPlayNext: () => void
+  onPlayPrevious: () => void
+  onOpenFile: () => void
+  onTogglePlaylist: () => void
   togglePause: () => void
   toggleFullscreen: () => void
   setVolume: (v: number) => void
-  onOpenFile: () => void
   onSeekChange: (t: number) => void
   onSeekCommit: (t: number) => void
   seekingRef: React.MutableRefObject<boolean>
@@ -20,7 +28,9 @@ interface ControlsProps {
 export function Controls(props: ControlsProps) {
   const {
     paused, volume, filename, isFullscreen,
-    togglePause, toggleFullscreen, setVolume, onOpenFile,
+    subtitlesAvailable, subtitlesVisible, hasNext, hasPrevious,
+    onToggleSubtitles, onPlayNext, onPlayPrevious, onOpenFile, onTogglePlaylist,
+    togglePause, toggleFullscreen, setVolume,
     onSeekChange, onSeekCommit, seekingRef, timePos, duration,
   } = props
   return (
@@ -40,8 +50,31 @@ export function Controls(props: ControlsProps) {
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
           )}
         </button>
+        <button type="button" className="icon-btn" disabled={!hasPrevious} onClick={onPlayPrevious} aria-label="Piste précédente">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+          </svg>
+        </button>
+        <button type="button" className="icon-btn" disabled={!hasNext} onClick={onPlayNext} aria-label="Piste suivante">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6l8.5 6L6 18V6zm10 0h2v12h-2z" /></svg>
+        </button>
         <VolumeControl volume={volume} setVolume={setVolume} />
+        <button
+          type="button"
+          className={`icon-btn${subtitlesVisible ? ' is-active' : ''}`}
+          onClick={onToggleSubtitles}
+          aria-label={subtitlesVisible ? 'Masquer les sous-titres' : 'Afficher les sous-titres'}
+          title={subtitlesAvailable ? 'Sous-titres (s)' : 'Aucun sous-titre trouvé'}
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm-2-4H10v-2h8v2z" />
+          </svg>
+        </button>
         <span className="filename">{filename ?? ''}</span>
+        <button type="button" className="icon-btn" onClick={onTogglePlaylist} aria-label="File d'attente (l)">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h10v2H4v-2zm14 0h2v2h-2v-2zm2-5l-6 4v-8l6 4z" />
+          </svg>
+        </button>
         <button type="button" className="icon-btn" onClick={(e) => { e.stopPropagation(); toggleFullscreen() }} aria-label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}>
           {isFullscreen ? (
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16h3v3h2v-5H5zm3-8H5v2h5V5H8zm6 11h2v-3h3v-2h-5zm2-11V5h-2v5h5V8z" /></svg>

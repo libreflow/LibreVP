@@ -30,7 +30,7 @@ export interface PlayerState {
   volume: number
 }
 
-export function usePlayer(showControls: boolean): PlayerState & {
+export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) => void): PlayerState & {
   loadFile: (path: string) => Promise<void>
   seekingRef: React.MutableRefObject<boolean>
   readyRef: React.MutableRefObject<boolean>
@@ -152,10 +152,11 @@ export function usePlayer(showControls: boolean): PlayerState & {
         resume.track({ timePos: resumeAt })
         setTimePos(resumeAt)
       }
+      onFileLoaded?.(path)
     } catch (e) {
       setError(`Impossible de lire ce fichier : ${String(e)}`)
     }
-  }, [resume])
+  }, [resume, onFileLoaded])
 
   const togglePause = useCallback(() => {
     const next = !pausedRef.current
