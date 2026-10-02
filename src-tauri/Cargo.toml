@@ -1,17 +1,17 @@
 [package]
-name = "librevp"
+name = "libre-media-player"
 version = "0.1.0"
-description = "LibreVP - a video player Tauri App"
+description = "Libre Media Player - a free (libre) desktop video player built on mpv"
 authors = ["libreflow"]
 license = "MIT"
-repository = "https://github.com/libreflow/LibreVP"
+repository = "https://github.com/libreflow/libre-media-player"
 edition = "2024"
 rust-version = "1.90"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "librevp_lib"
+name = "libre_media_player_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

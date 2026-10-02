@@ -2,16 +2,16 @@ import { useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
-// Handles two distinct ways LibreVP can be told to open a file from outside
+// Handles two distinct ways Libre Media Player can be told to open a file from outside
 // its own UI (double-clicking a video in Explorer, "Open with" context menu):
 //
-// 1. Cold start: the OS launched a brand-new LibreVP process with the file's
+// 1. Cold start: the OS launched a brand-new Libre Media Player process with the file's
 //    path as a command-line argument. Rust stashes that path and the
 //    frontend pulls it ONCE via `get_initial_file` as soon as the player is
 //    ready -- a push (emit) on startup would race the frontend's listener
 //    not being attached yet (the webview is still loading while Rust's
 //    setup() already ran), so this direction is deliberately pull-based.
-// 2. LibreVP is already running: tauri-plugin-single-instance intercepts the
+// 2. Libre Media Player is already running: tauri-plugin-single-instance intercepts the
 //    second launch attempt entirely (no new process/window is created) and
 //    Rust emits an `open-file` event with the new path instead. By
 //    definition the frontend has been running for a while, so there's no

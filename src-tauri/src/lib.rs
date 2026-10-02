@@ -50,7 +50,7 @@ pub fn run() {
 
     // Must be the very first plugin registered (see tauri-plugin-single-instance
     // docs) so it can intercept a second launch before anything else runs.
-    // Without this, double-clicking a second video file while LibreVP is
+    // Without this, double-clicking a second video file while Libre Media Player is
     // already open spawns a whole separate window/mpv instance instead of
     // reusing the existing one.
     #[cfg(desktop)]
