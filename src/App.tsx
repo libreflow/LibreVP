@@ -7,12 +7,12 @@ import { Controls } from './components/Controls'
 import './App.css'
 
 function App() {
-  const player = usePlayer()
+  const { showControls, onPointerActivity } = useControlsVisibility()
+  const player = usePlayer(showControls)
   const [error, setError] = useState<string | null>(null)
 
   const onError = useCallback((msg: string) => setError(msg), [])
   const { isFullscreen, toggleFullscreen } = useFullscreen(onError)
-  const { showControls, onPointerActivity } = useControlsVisibility()
   const { isDragOver, openFile } = useFilePicker({
     readyRef: player.readyRef,
     loadFile: player.loadFile,

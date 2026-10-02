@@ -9,6 +9,7 @@ import {
   setVideoMarginRatio,
   type MpvObservableProperty,
 } from 'tauri-plugin-libmpv-api'
+import { CONTROLS_MARGIN_RATIO } from '../utils'
 
 const OBSERVED_PROPERTIES = [
   ['pause', 'flag'],
@@ -17,10 +18,6 @@ const OBSERVED_PROPERTIES = [
   ['filename', 'string', 'none'],
   ['volume', 'int64'],
 ] as const satisfies MpvObservableProperty[]
-
-// Reserve space at the bottom of the mpv video surface so our HTML control
-// bar never overlaps the picture itself.
-const CONTROLS_MARGIN_RATIO = 0.1
 
 export interface PlayerState {
   ready: boolean
@@ -32,7 +29,7 @@ export interface PlayerState {
   volume: number
 }
 
-export function usePlayer(): PlayerState & {
+export function usePlayer(showControls: boolean): PlayerState & {
   loadFile: (path: string) => Promise<void>
   seekingRef: React.MutableRefObject<boolean>
   readyRef: React.MutableRefObject<boolean>
@@ -68,7 +65,6 @@ export function usePlayer(): PlayerState & {
           observedProperties: OBSERVED_PROPERTIES,
         })
         if (cancelled) return
-        await setVideoMarginRatio({ bottom: CONTROLS_MARGIN_RATIO })
         unlisten = await observeProperties(OBSERVED_PROPERTIES, (event) => {
           switch (event.name) {
             case 'pause':
@@ -107,6 +103,16 @@ export function usePlayer(): PlayerState & {
       }
     }
   }, [])
+
+  // Keep mpv's reserved bottom margin in sync with the HTML control bar's
+  // real visibility instead of reserving it permanently. Reserving it
+  // unconditionally centred the picture in a permanently-shrunk region, so
+  // the video sat visibly off-centre (extra black bar at the bottom) every
+  // time the controls auto-hid after a few seconds of inactivity.
+  useEffect(() => {
+    if (!ready) return
+    void setVideoMarginRatio({ bottom: showControls ? CONTROLS_MARGIN_RATIO : 0 })
+  }, [ready, showControls])
 
   const loadFile = useCallback(async (path: string) => {
     setError(null)
