@@ -13,6 +13,7 @@ export function useKeyboardShortcuts(opts: {
   togglePause: () => void
   toggleFullscreen: () => void
   toggleSubtitles: () => void
+  toggleMotion: () => void
   playNext: () => void
   playPrevious: () => void
   togglePlaylist: () => void
@@ -59,6 +60,10 @@ export function useKeyboardShortcuts(opts: {
         case 's':
           e.preventDefault()
           opts.toggleSubtitles()
+          break
+        case 'm':
+          e.preventDefault()
+          opts.toggleMotion()
           break
         case 'n':
           e.preventDefault()

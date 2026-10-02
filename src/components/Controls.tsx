@@ -8,9 +8,11 @@ interface ControlsProps {
   isFullscreen: boolean
   subtitlesAvailable: boolean
   subtitlesVisible: boolean
+  motionEnabled: boolean
   hasNext: boolean
   hasPrevious: boolean
   onToggleSubtitles: () => void
+  onToggleMotion: () => void
   onPlayNext: () => void
   onPlayPrevious: () => void
   onOpenFile: () => void
@@ -28,8 +30,8 @@ interface ControlsProps {
 export function Controls(props: ControlsProps) {
   const {
     paused, volume, filename, isFullscreen,
-    subtitlesAvailable, subtitlesVisible, hasNext, hasPrevious,
-    onToggleSubtitles, onPlayNext, onPlayPrevious, onOpenFile, onTogglePlaylist,
+    subtitlesAvailable, subtitlesVisible, motionEnabled, hasNext, hasPrevious,
+    onToggleSubtitles, onToggleMotion, onPlayNext, onPlayPrevious, onOpenFile, onTogglePlaylist,
     togglePause, toggleFullscreen, setVolume,
     onSeekChange, onSeekCommit, seekingRef, timePos, duration,
   } = props
@@ -67,6 +69,17 @@ export function Controls(props: ControlsProps) {
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM4 12h4v2H4v-2zm10 6H4v-2h10v2zm6 0h-4v-2h4v2zm-2-4H10v-2h8v2z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className={`icon-btn${motionEnabled ? ' is-active' : ''}`}
+          onClick={onToggleMotion}
+          aria-label={motionEnabled ? 'Désactiver la fluidité du mouvement' : 'Activer la fluidité du mouvement'}
+          title="Fluidité du mouvement — interpolation mpv (m)"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.38 8.88l-4.24-1.7 1.7-4.24-1.6-.64-1.7 4.24-4.24-1.7-.64 1.6 4.24 1.7-1.7 4.24 1.6.64 1.7-4.24 4.24 1.7.64-1.6-4.24-1.7 1.7-4.24-1.6-.64zM3 15.5l6 6 1.41-1.42-6-6L3 15.5zm12.5 3.5l6-6-1.42-1.42-6 6L15.5 19z" />
           </svg>
         </button>
         <span className="filename">{filename ?? ''}</span>

@@ -5,6 +5,7 @@ import { useKeyboardShortcuts, useFullscreen, useControlsVisibility } from './ho
 import { useFilePicker } from './hooks/useFilePicker'
 import { useFileAssociation } from './hooks/useFileAssociation'
 import { useSubtitles } from './hooks/useSubtitles'
+import { useMotionInterpolation } from './hooks/useMotionInterpolation'
 import { usePlaylist } from './hooks/usePlaylist'
 import { Controls } from './components/Controls'
 import { PlaylistPanel } from './components/PlaylistPanel'
@@ -14,6 +15,7 @@ function App() {
   const { showControls, onPointerActivity } = useControlsVisibility()
   const subtitles = useSubtitles()
   const player = usePlayer(showControls, (path) => void subtitles.onFileLoaded(path))
+  const motion = useMotionInterpolation(player.ready)
   const [error, setError] = useState<string | null>(null)
   const onError = useCallback((msg: string) => setError(msg), [])
   const { isFullscreen, toggleFullscreen } = useFullscreen(onError)
@@ -45,6 +47,7 @@ function App() {
     togglePause: player.togglePause,
     toggleFullscreen,
     toggleSubtitles: subtitles.toggle,
+    toggleMotion: () => void motion.toggle(),
     playNext: playlist.playNext,
     playPrevious: playlist.playPrevious,
     togglePlaylist: () => playlist.setPanelOpen(!playlist.panelOpen),
@@ -105,6 +108,8 @@ function App() {
         subtitlesAvailable={subtitles.available}
         subtitlesVisible={subtitles.visible}
         onToggleSubtitles={() => void subtitles.toggle()}
+        motionEnabled={motion.enabled}
+        onToggleMotion={() => void motion.toggle()}
         hasNext={playlist.currentIndex < playlist.queue.length - 1}
         hasPrevious={playlist.currentIndex > 0}
         onPlayNext={playlist.playNext}
