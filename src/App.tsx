@@ -3,6 +3,7 @@ import { command } from 'tauri-plugin-libmpv-api'
 import { usePlayer } from './hooks/usePlayer'
 import { useKeyboardShortcuts, useFullscreen, useControlsVisibility } from './hooks/useShortcuts'
 import { useFilePicker } from './hooks/useFilePicker'
+import { useFileAssociation } from './hooks/useFileAssociation'
 import { Controls } from './components/Controls'
 import './App.css'
 
@@ -14,6 +15,11 @@ function App() {
   const onError = useCallback((msg: string) => setError(msg), [])
   const { isFullscreen, toggleFullscreen } = useFullscreen(onError)
   const { isDragOver, openFile } = useFilePicker({
+    readyRef: player.readyRef,
+    loadFile: player.loadFile,
+    onError,
+  })
+  useFileAssociation({
     readyRef: player.readyRef,
     loadFile: player.loadFile,
     onError,
