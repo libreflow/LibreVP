@@ -12,6 +12,11 @@ export function useKeyboardShortcuts(opts: {
   isFullscreen: boolean
   togglePause: () => void
   toggleFullscreen: () => void
+  toggleSubtitles: () => void
+  toggleMotion: () => void
+  playNext: () => void
+  playPrevious: () => void
+  togglePlaylist: () => void
 }) {
   const hasMediaRef = useRef(false)
   hasMediaRef.current = opts.hasMedia
@@ -52,6 +57,26 @@ export function useKeyboardShortcuts(opts: {
           e.preventDefault()
           void setProperty('volume', Math.max(0, opts.volume - 5))
           break
+        case 's':
+          e.preventDefault()
+          opts.toggleSubtitles()
+          break
+        case 'm':
+          e.preventDefault()
+          opts.toggleMotion()
+          break
+        case 'n':
+          e.preventDefault()
+          opts.playNext()
+          break
+        case 'p':
+          e.preventDefault()
+          opts.playPrevious()
+          break
+        case 'l':
+          e.preventDefault()
+          opts.togglePlaylist()
+          break
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -62,6 +87,7 @@ export function useKeyboardShortcuts(opts: {
 
 export function useFullscreen(onError: (msg: string) => void) {
   const [isFullscreen, setIsFullscreen] = useState(false)
+
   const toggleFullscreen = useCallback(() => {
     const win = getCurrentWindow()
     void win.isFullscreen().then((fs) => {
@@ -69,6 +95,22 @@ export function useFullscreen(onError: (msg: string) => void) {
       setIsFullscreen(!fs)
     })
   }, [onError])
+
+  // Keep the React state in sync when fullscreen is toggled from outside
+  // our own UI (OS-native F11, window-manager shortcuts, ...). Without
+  // this listener the fullscreen button icon would go stale. The window
+  // object exposes no onFullscreenChanged helper; the raw event works.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined
+    ;(async () => {
+      unlisten = await getCurrentWindow().listen<boolean>(
+        'tauri://fullscreen-changed',
+        ({ payload }) => setIsFullscreen(payload),
+      )
+    })()
+    return () => unlisten?.()
+  }, [])
+
   return { isFullscreen, toggleFullscreen }
 }
 

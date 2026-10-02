@@ -10,6 +10,7 @@ import { pickSupportedFile, VIDEO_EXTENSIONS } from '../utils'
 export function useFilePicker(opts: {
   readyRef: React.MutableRefObject<boolean>
   loadFile: (path: string) => Promise<void>
+  onFilesDropped?: (paths: string[]) => void
   onError: (msg: string) => void
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
@@ -36,8 +37,13 @@ export function useFilePicker(opts: {
         if (event.payload.type === 'leave') setIsDragOver(false)
         if (event.payload.type === 'drop') {
           setIsDragOver(false)
-          const path = pickSupportedFile(event.payload.paths)
-          if (path && opts.readyRef.current) void opts.loadFile(path)
+          const paths = event.payload.paths
+          if (opts.onFilesDropped) {
+            opts.onFilesDropped(paths)
+          } else {
+            const path = pickSupportedFile(paths)
+            if (path && opts.readyRef.current) void opts.loadFile(path)
+          }
         }
       })
     })()
