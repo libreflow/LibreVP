@@ -75,7 +75,8 @@ function App() {
 
       {!hasMedia && (
         <div className="drop-zone">
-          <div className="drop-zone__title">LibreVP</div>
+          <div className="drop-zone__title">LMP</div>
+          <div className="drop-zone__subtitle">Libre Media Player</div>
           <button
             type="button"
             className="open-btn"

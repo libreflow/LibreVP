@@ -26,10 +26,18 @@
 }
 
 .drop-zone__title {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 34px;
+  font-weight: 700;
   color: var(--color-text);
   letter-spacing: 0.2px;
+}
+
+.drop-zone__subtitle {
+  margin-top: -6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-faint);
+  letter-spacing: 0.3px;
 }
 
 .open-btn {
