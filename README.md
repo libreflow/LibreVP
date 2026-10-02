@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.png" width="180" alt="Logo Libre Media Player" /></p>
+
 # Libre Media Player
 
 Lecteur vidéo de bureau libre et gratuit. Le moteur de lecture est
