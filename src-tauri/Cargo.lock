@@ -1981,7 +1981,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "librevp"
+name = "libre-media-player"
 version = "0.1.0"
 dependencies = [
  "log",
