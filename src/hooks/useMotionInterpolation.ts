@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { setProperty } from 'tauri-plugin-libmpv-api'
-import { loadSettings, saveSettings } from '../settings'
+import { loadSettings, updateSettings } from '../settings'
 
 // Smooth-motion (fluidity) toggle, backed by mpv's display-sync
 // interpolation. When enabled:
@@ -51,7 +51,7 @@ export function useMotionInterpolation(ready: boolean) {
   const toggle = useCallback(async () => {
     const next = !enabled
     setEnabled(next)
-    await saveSettings({ motionInterpolation: next })
+    await updateSettings({ motionInterpolation: next })
     try {
       await applyToMpv(next)
     } catch {

@@ -29,6 +29,9 @@ const PATH = 'C:/movies/film.mkv'
 
 beforeEach(() => {
   memory.clear()
+  // prunedMap() checks that each tracked video still exists on disk; the
+  // test's PATH must therefore "exist" in the mocked filesystem.
+  memory.set(PATH, '')
 })
 
 describe('saveResumePosition / getResumePosition', () => {

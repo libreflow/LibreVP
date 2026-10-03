@@ -10,6 +10,7 @@ import {
   type MpvObservableProperty,
 } from 'tauri-plugin-libmpv-api'
 import { CONTROLS_MARGIN_RATIO } from '../utils'
+import { loadSettings, updateSettings } from '../settings'
 import { useResumePosition } from './useResumePosition'
 
 const OBSERVED_PROPERTIES = [
@@ -56,7 +57,26 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
   // basename, which is ambiguous as a resume-map key across directories).
   const currentPathRef = useRef<string | null>(null)
 
-  const resume = useResumePosition(ready)
+  // Reads the current audio/sub track selection from mpv into the resume
+  // tracking state. Reading per-save (rather than in the property observer)
+  // avoids a stale sid/aid when the user switches tracks right before
+  // pausing or closing. trackSelection is reached through a ref because
+  // it lives on the resume object which is created just below.
+  const trackSelectionRef = useRef<(sel: { sid: string | null; aid: string | null }) => void>(() => {})
+  const captureTrackSelection = useCallback(async () => {
+    try {
+      const [sid, aid] = await Promise.all([
+        getProperty('sid', 'string'),
+        getProperty('aid', 'string'),
+      ])
+      trackSelectionRef.current({ sid, aid })
+    } catch {
+      // Track selection is optional enrichment for resume; ignore failures.
+    }
+  }, [])
+
+  const resume = useResumePosition(ready, captureTrackSelection)
+  trackSelectionRef.current = resume.trackSelection
   // Keep the latest onFileLoaded callback reachable from the stable
   // loadFile without re-creating loadFile (and the listeners that depend
   // on its identity) on every render.
@@ -111,6 +131,15 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
               break
           }
         })
+        // Restore the persisted volume once the player is up (mpv's own
+        // default is 100 and would otherwise override the saved value).
+        try {
+          const { volume: saved } = await loadSettings()
+          await setProperty('volume', saved)
+          setVolumeState(saved)
+        } catch {
+          // best-effort; default volume (100) stays
+        }
         setReady(true)
         readyRef.current = true
       } catch (e) {
@@ -183,6 +212,18 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
         resume.track({ timePos: resumeAt })
         setTimePos(resumeAt)
       }
+      // Restore the remembered audio/sub track selection, if any. Track ids
+      // refer to THIS file's track-list (ids are per-file in mpv), so a bad
+      // id (file changed since) is rejected by mpv and ignored here.
+      try {
+        const tracks = await resume.resumeTracks(path)
+        if (tracks && currentPathRef.current === path) {
+          if (tracks.sid != null) await setProperty('sid', tracks.sid)
+          if (tracks.aid != null) await setProperty('aid', tracks.aid)
+        }
+      } catch {
+        // best-effort; defaults apply
+      }
       onFileLoadedRef.current?.(path)
     } catch (e) {
       setError(`Impossible de lire ce fichier : ${String(e)}`)
@@ -201,6 +242,7 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
   const setVolume = useCallback((v: number) => {
     setVolumeState(v)
     void setProperty('volume', v)
+    void updateSettings({ volume: v })
   }, [])
 
   return {

@@ -15,6 +15,10 @@ interface ResumeEntry {
   position: number
   duration: number
   updatedAt: number
+  /** Selected subtitle track id at exit ('no' = forced off), if any. */
+  sid?: string
+  /** Selected audio track id at exit, if any. */
+  aid?: string
 }
 
 type ResumeMap = Record<string, ResumeEntry>
@@ -51,9 +55,34 @@ async function writeResumeMap(map: ResumeMap): Promise<void> {
   await writeTextFile(path, JSON.stringify(map))
 }
 
+// Drops entries whose file no longer exists on disk, so the map doesn't
+// grow forever with positions of deleted/moved videos. Best-effort: an
+// exists() that throws (e.g. unreadable directory) keeps the entry.
+async function prunedMap(map: ResumeMap): Promise<ResumeMap> {
+  const entries = await Promise.all(
+    Object.entries(map).map(async ([filePath, entry]) => {
+      let fileExists = true
+      try {
+        fileExists = await exists(filePath)
+      } catch {
+        fileExists = true
+      }
+      return fileExists ? [filePath, entry] : null
+    }),
+  )
+  return Object.fromEntries(entries.filter((e): e is [string, ResumeEntry] => e !== null))
+}
+
 // Returns the remembered position for this file, or null if there is
 // nothing resumable (never played, too close to the start, or already
 // finished).
+export async function getResumeTracks(filePath: string): Promise<{ sid?: string; aid?: string } | null> {
+  const map = await readResumeMap()
+  const entry = map[filePath]
+  if (!entry) return null
+  return { sid: entry.sid, aid: entry.aid }
+}
+
 export async function getResumePosition(filePath: string): Promise<number | null> {
   const map = await readResumeMap()
   const entry = map[filePath]
@@ -70,6 +99,7 @@ export async function saveResumePosition(
   filePath: string,
   position: number,
   duration: number,
+  tracks?: { sid?: string; aid?: string },
 ): Promise<void> {
   try {
     const map = await readResumeMap()
@@ -82,8 +112,14 @@ export async function saveResumePosition(
       }
       return
     }
-    map[filePath] = { position, duration, updatedAt: Date.now() }
-    await writeResumeMap(map)
+    map[filePath] = {
+      position,
+      duration,
+      updatedAt: Date.now(),
+      ...(tracks?.sid != null && { sid: tracks.sid }),
+      ...(tracks?.aid != null && { aid: tracks.aid }),
+    }
+    await writeResumeMap(await prunedMap(map))
   } catch {
     // Disk full, permission error, etc. -- silently skip, see above.
   }
