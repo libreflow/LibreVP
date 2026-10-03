@@ -59,7 +59,7 @@ export function useFilePicker(opts: {
       })
     })()
     return () => unlisten?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable: loadFile is memoized with [] deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: loadFile is referentially stable (usePlayer's useCallback now depends on useResumePosition's memoized return object)
   }, [opts.loadFile])
 
   return { isDragOver, openFile }

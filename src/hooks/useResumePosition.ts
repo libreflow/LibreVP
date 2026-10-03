@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { getResumePosition, saveResumePosition } from '../resume'
 
@@ -81,5 +81,16 @@ export function useResumePosition(ready: boolean) {
     return () => unlisten?.()
   }, [ready, checkpoint])
 
-  return { track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, resumeAt }
+  // Memoized so the returned object itself stays referentially stable --
+  // every property here is already a []-deps useCallback, but without this
+  // the OBJECT LITERAL was a fresh reference on every render regardless.
+  // usePlayer's loadFile depends on this whole object ([resume]), so an
+  // unstable object silently defeated loadFile's own memoization: it was
+  // recreated on every mpv time-pos tick (several times a second during
+  // playback), which in turn churned every effect depending on loadFile's
+  // identity (e.g. useFilePicker's native drag-drop subscription).
+  return useMemo(
+    () => ({ track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, resumeAt }),
+    [track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, resumeAt],
+  )
 }
