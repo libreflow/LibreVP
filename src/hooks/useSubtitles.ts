@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getProperty } from 'tauri-plugin-libmpv-api'
 import {
+  countSubtitleTracks,
   findSidecarSubtitle,
   isSubtitleVisible,
   loadSubtitle,
@@ -30,11 +30,12 @@ export function useSubtitles() {
           setVisible(true)
         } else {
           // No sidecar, but the container may embed sub tracks (MKV, MP4...).
-          // Ask mpv for the real track count instead of reporting "none".
-          const trackCount = await getProperty('track-list/count', 'int64')
-          const hasSubs = trackCount != null && trackCount > 0
-          setAvailable(hasSubs)
-          setVisible(hasSubs ? await isSubtitleVisible() : false)
+          // Count only tracks of type 'sub' -- track-list/count would report
+          // the total track count (video + audio + subs), which is always
+          // non-zero for any playable file.
+          const subCount = await countSubtitleTracks()
+          setAvailable(subCount > 0)
+          setVisible(subCount > 0 ? await isSubtitleVisible() : false)
         }
       }
     } catch {
@@ -46,17 +47,17 @@ export function useSubtitles() {
   }, [])
 
   const toggle = useCallback(async () => {
-    try {
-      // Prefer mpv's real state: if an embedded track is active, toggling
-      // visibility applies to it too, not just our sidecar.
-      const current = await isSubtitleVisible()
-      const next = !current
-      await setSubtitleVisible(next)
-      setVisible(next)
-      setAvailable(true)
-    } catch {
-      // No sub track at all -- nothing to toggle.
-    }
+    // setProperty('sub-visibility') never rejects (it's a plain mpv flag),
+    // so the old try/catch never caught the "no sub track" case and the
+    // button always ended up marked active. Check the real track count
+    // instead and no-op when there is nothing to toggle.
+    if ((await countSubtitleTracks()) === 0) return
+    // Prefer mpv's real state: if an embedded track is active, toggling
+    // visibility applies to it too, not just our sidecar.
+    const next = !(await isSubtitleVisible())
+    await setSubtitleVisible(next)
+    setVisible(next)
+    setAvailable(true)
   }, [])
 
   // Reset when the app starts (no file loaded yet).

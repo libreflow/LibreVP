@@ -11,6 +11,7 @@ export function useFilePicker(opts: {
   readyRef: React.MutableRefObject<boolean>
   loadFile: (path: string) => Promise<void>
   onFilesDropped?: (paths: string[]) => void
+  onFilePicked?: (path: string) => void
   onError: (msg: string) => void
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
@@ -23,7 +24,13 @@ export function useFilePicker(opts: {
         filters: [{ name: 'Vidéo', extensions: VIDEO_EXTENSIONS }],
       })
       if (!path || Array.isArray(path)) return
-      await opts.loadFile(path)
+      // Route through the queue like drag-drop does, so the picked file
+      // gets prev/next navigation too instead of playing "outside".
+      if (opts.onFilePicked) {
+        opts.onFilePicked(path)
+      } else {
+        await opts.loadFile(path)
+      }
     } catch (e) {
       opts.onError(`Impossible d'ouvrir le sélecteur de fichier : ${String(e)}`)
     }

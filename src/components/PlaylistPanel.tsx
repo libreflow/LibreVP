@@ -30,7 +30,7 @@ export function PlaylistPanel({ open, queue, currentIndex, onPlay, onRemove, onC
       <ul className="playlist-panel__list">
         {queue.map((item, i) => (
           <li
-            key={item.path}
+            key={`${i}-${item.path}`}
             className={`playlist-panel__item${i === currentIndex ? ' is-current' : ''}`}
             onClick={() => onPlay(i)}
           >

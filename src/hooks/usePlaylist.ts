@@ -45,8 +45,11 @@ export function usePlaylist(opts: {
     async (index: number) => {
       const item = queueRef.current[index]
       if (!item) return
-      setCurrentIndex(index)
+      // Only commit the index once the file actually loads -- a corrupt
+      // file used to leave the queue pointing at an unplayable "ghost"
+      // item, breaking prev/next navigation and EOF auto-advance.
       await loadFileRef.current(item.path)
+      if (queueRef.current[index] === item) setCurrentIndex(index)
     },
     [],
   )

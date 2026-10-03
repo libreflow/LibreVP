@@ -36,12 +36,18 @@ export function useResumePosition(ready: boolean) {
     await saveResumePosition(path, timePos, duration ?? 0)
   }, [])
 
-  // Reset tracking state when a new file is loaded.
+  // Reset tracking state when a new file is loaded. Grab the outgoing
+  // state synchronously: waiting for the checkpoint's write to complete
+  // before clearing let a time-pos event from the NEW file land in the
+  // OLD file's entry (and vice versa) -- the reset must take effect
+  // immediately, while the save runs in the background on its own copy.
   const onFileChange = useCallback((path: string) => {
-    void checkpoint().then(() => {
-      stateRef.current = { path, timePos: null, duration: null }
-    })
-  }, [checkpoint])
+    const outgoing = stateRef.current
+    stateRef.current = { path, timePos: null, duration: null }
+    const { path: oldPath, timePos, duration } = outgoing
+    if (!oldPath || timePos == null) return
+    void saveResumePosition(oldPath, timePos, duration ?? 0)
+  }, [])
 
   // Returns the remembered position for this path, or null.
   const resumeAt = useCallback((path: string) => getResumePosition(path), [])

@@ -25,6 +25,9 @@ function App() {
     onFilesDropped: (paths) => {
       if (player.readyRef.current) playlist.append(paths)
     },
+    onFilePicked: (path) => {
+      if (player.readyRef.current) playlist.append([path])
+    },
     onError,
   })
   const playlist = usePlaylist({
