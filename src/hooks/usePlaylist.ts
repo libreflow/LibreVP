@@ -35,14 +35,20 @@ export function usePlaylist(opts: {
   queueRef.current = queue
   indexRef.current = currentIndex
 
+  // loadFile is stable (memoized with [resume] in usePlayer), but mirroring
+  // it in a ref keeps playIndex itself identity-stable so the end-file
+  // listener below never re-subscribes.
+  const loadFileRef = useRef(opts.loadFile)
+  loadFileRef.current = opts.loadFile
+
   const playIndex = useCallback(
     async (index: number) => {
       const item = queueRef.current[index]
       if (!item) return
       setCurrentIndex(index)
-      await opts.loadFile(item.path)
+      await loadFileRef.current(item.path)
     },
-    [opts],
+    [],
   )
 
   // Append files to the queue. When the queue was empty, the first file is

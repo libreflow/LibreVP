@@ -26,12 +26,14 @@ fn find_video_arg(args: &[String]) -> Option<String> {
 
 struct InitialFile(Mutex<Option<String>>);
 
-// Consumed exactly once by the frontend on startup (after the player is
-// ready to accept a loadFile call) -- `.take()` clears it so a later
-// re-render/remount doesn't re-trigger the same initial file.
+// Read (not consumed) by the frontend on startup: the initial OS-launch
+// file must stay queryable idempotently, because the webview can be
+// recreated (StrictMode double-mount in dev, or a runtime webview reload)
+// and re-request it -- `.take()` would have cleared it and silently lost
+// the file on that second request.
 #[tauri::command]
 fn get_initial_file(state: tauri::State<InitialFile>) -> Option<String> {
-    state.0.lock().unwrap().take()
+    state.0.lock().unwrap().clone()
 }
 
 fn focus_main_window(app: &AppHandle) {

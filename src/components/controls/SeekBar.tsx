@@ -29,6 +29,7 @@ export function SeekBar({ timePos, duration, seekingRef, onSeekChange, onSeekCom
         }}
         onMouseUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
         onKeyUp={(e) => onSeekCommit(Number(e.currentTarget.value))}
+        onTouchEnd={(e) => onSeekCommit(Number(e.currentTarget.value))}
       />
       <span className="time">{formatTime(duration)}</span>
     </div>

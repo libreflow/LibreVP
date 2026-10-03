@@ -10,10 +10,17 @@ function swapExtension(path: string, ext: string): string {
   return `${base}.${ext}`
 }
 
+function splitPath(path: string): { dir: string; name: string } {
+  const slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  if (slash === -1) return { dir: '', name: path }
+  // Preserve a Windows drive prefix ("C:") when it directly abuts the name.
+  if (slash === 1 && path[1] === ':') return { dir: path.slice(0, 2), name: path.slice(3) }
+  return { dir: path.slice(0, slash + 1), name: path.slice(slash + 1) }
+}
+
 function subtitleCandidates(videoPath: string): string[] {
   const sameExt = SUBTITLE_EXTENSIONS.map((ext) => swapExtension(videoPath, ext))
-  const dir = videoPath.slice(0, videoPath.lastIndexOf('/') + 1)
-  const name = videoPath.slice(videoPath.lastIndexOf('/') + 1)
+  const { dir, name } = splitPath(videoPath)
   const bare = name.includes('.') ? name.slice(0, name.lastIndexOf('.')) : name
   // Also try "<bare>.<lang>.<ext>" patterns mpv would auto-discover.
   const langVariants = ['en', 'fr', 'eng', 'fre']

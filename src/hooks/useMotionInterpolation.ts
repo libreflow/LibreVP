@@ -27,7 +27,10 @@ export function useMotionInterpolation(ready: boolean) {
       if (cancelled) return
       setEnabled(settings.motionInterpolation)
       setLoaded(true)
-      await applyToMpv(settings.motionInterpolation)
+      await applyToMpv(settings.motionInterpolation).catch(() => {
+        // Player not ready yet or the property was rejected -- leave the
+        // stored preference alone; toggle() re-applies it on next use.
+      })
     })()
     return () => {
       cancelled = true

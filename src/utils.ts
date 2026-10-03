@@ -25,7 +25,7 @@ export function formatTime(seconds: number | null): string {
 
 const VIDEO_EXTENSION_SET = new Set(VIDEO_EXTENSIONS)
 
-function hasVideoExtension(path: string): boolean {
+export function hasVideoExtension(path: string): boolean {
   const dot = path.lastIndexOf('.')
   if (dot === -1) return false
   return VIDEO_EXTENSION_SET.has(path.slice(dot + 1).toLowerCase())
