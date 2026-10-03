@@ -42,6 +42,18 @@ export async function findSidecarSubtitle(videoPath: string): Promise<string | n
   return null
 }
 
+// Counts the container's embedded subtitle tracks via mpv's track-list.
+// track-list/count can't be used here: it totals video + audio + sub tracks
+// and is therefore non-zero for every playable file.
+export async function countSubtitleTracks(): Promise<number> {
+  const tracks = await getProperty('track-list', 'node')
+  if (!Array.isArray(tracks)) return 0
+  return tracks.filter(
+    (t): t is Record<string, unknown> =>
+      typeof t === 'object' && t !== null && t.type === 'sub',
+  ).length
+}
+
 export async function isSubtitleVisible(): Promise<boolean> {
   return (await getProperty('sub-visibility', 'flag')) ?? false
 }
