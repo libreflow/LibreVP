@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { getResumePosition, saveResumePosition } from '../resume'
+import { getResumePosition, getResumeTracks, saveResumePosition } from '../resume'
 
 // How often to persist the resume position while playing (seconds of
 // wall-clock time between writes). A crash/power loss between two
@@ -13,6 +13,9 @@ export interface ResumeTrackState {
   path: string | null
   timePos: number | null
   duration: number | null
+  /** Track selection snapshot, refreshed before each save. */
+  sid: string | null
+  aid: string | null
 }
 
 // Persists the playback position of the current file so re-opening it
@@ -23,17 +26,23 @@ export interface ResumeTrackState {
 // The hook is deliberately push-driven: usePlayer feeds it the current
 // path/position/duration through track() (called from mpv's property
 // observer) and calls checkpoint() at the moments that matter.
-export function useResumePosition(ready: boolean) {
-  const stateRef = useRef<ResumeTrackState>({ path: null, timePos: null, duration: null })
+export function useResumePosition(ready: boolean, onBeforeSave?: () => Promise<void>) {
+  const stateRef = useRef<ResumeTrackState>({ path: null, timePos: null, duration: null, sid: null, aid: null })
 
   const track = useCallback((next: Partial<ResumeTrackState>) => {
     Object.assign(stateRef.current, next)
   }, [])
 
+  const onBeforeSaveRef = useRef(onBeforeSave)
+  onBeforeSaveRef.current = onBeforeSave
+
   const checkpoint = useCallback(async () => {
-    const { path, timePos, duration } = stateRef.current
+    // Give the owner one chance to refresh the tracked state (e.g. the
+    // current mpv track selection) before the entry is written.
+    await onBeforeSaveRef.current?.().catch(() => {})
+    const { path, timePos, duration, sid, aid } = stateRef.current
     if (!path || timePos == null) return
-    await saveResumePosition(path, timePos, duration ?? 0)
+    await saveResumePosition(path, timePos, duration ?? 0, { sid: sid ?? undefined, aid: aid ?? undefined })
   }, [])
 
   // Split file-change handling in two so the mpv event window during
@@ -44,17 +53,27 @@ export function useResumePosition(ready: boolean) {
   // tracking reset to the new path only once loadfile has succeeded.
   const onFileChangeOutgoing = useCallback(() => {
     const outgoing = stateRef.current
-    const { path: oldPath, timePos, duration } = outgoing
+    const { path: oldPath, timePos, duration, sid, aid } = outgoing
     if (!oldPath || timePos == null) return
-    void saveResumePosition(oldPath, timePos, duration ?? 0)
+    void saveResumePosition(oldPath, timePos, duration ?? 0, { sid: sid ?? undefined, aid: aid ?? undefined })
   }, [])
 
   const onFileChangeIncoming = useCallback((path: string) => {
-    stateRef.current = { path, timePos: null, duration: null }
+    stateRef.current = { path, timePos: null, duration: null, sid: null, aid: null }
+  }, [])
+
+  // Snapshot the current track selection into the tracking state; the
+  // player calls this before every checkpoint so saves are never stale.
+  const trackSelection = useCallback((sel: { sid: string | null; aid: string | null }) => {
+    stateRef.current.sid = sel.sid
+    stateRef.current.aid = sel.aid
   }, [])
 
   // Returns the remembered position for this path, or null.
   const resumeAt = useCallback((path: string) => getResumePosition(path), [])
+
+  // Returns the remembered track selection for this path, or null.
+  const resumeTracks = useCallback((path: string) => getResumeTracks(path), [])
 
   // Periodic checkpoint while playing, so a crash or power loss between
   // pauses loses at most RESUME_SAVE_INTERVAL_MS of progress.
@@ -90,7 +109,7 @@ export function useResumePosition(ready: boolean) {
   // playback), which in turn churned every effect depending on loadFile's
   // identity (e.g. useFilePicker's native drag-drop subscription).
   return useMemo(
-    () => ({ track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, resumeAt }),
-    [track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, resumeAt],
+    () => ({ track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, trackSelection, resumeAt, resumeTracks }),
+    [track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, trackSelection, resumeAt, resumeTracks],
   )
 }

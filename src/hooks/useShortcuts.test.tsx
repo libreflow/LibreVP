@@ -33,6 +33,7 @@ function Harness({ onSnapshot }: { onSnapshot: (s: { enabled: boolean; panelOpen
     hasMedia: true,
     volume: 100,
     isFullscreen: false,
+    isPlaylistOpen: panelOpen,
     togglePause: stableTogglePause,
     toggleFullscreen: stableToggleFullscreen,
     toggleSubtitles: () => {},
@@ -84,6 +85,7 @@ describe('useKeyboardShortcuts', () => {
         hasMedia: false,
         volume: 100,
         isFullscreen: false,
+        isPlaylistOpen: false,
         togglePause,
         toggleFullscreen: () => {},
         toggleSubtitles: () => {},
@@ -97,5 +99,55 @@ describe('useKeyboardShortcuts', () => {
     render(<NoMediaHarness />)
     act(() => press('k'))
     expect(togglePause).not.toHaveBeenCalled()
+  })
+
+  it('Escape closes the playlist panel first, before touching fullscreen', () => {
+    const toggleFullscreen = vi.fn()
+    const togglePlaylist = vi.fn()
+    function EscapeHarness({ isPlaylistOpen }: { isPlaylistOpen: boolean }) {
+      useKeyboardShortcuts({
+        hasMedia: true,
+        volume: 100,
+        isFullscreen: true,
+        isPlaylistOpen,
+        togglePause: () => {},
+        toggleFullscreen,
+        toggleSubtitles: () => {},
+        toggleMotion: () => {},
+        playNext: () => {},
+        playPrevious: () => {},
+        togglePlaylist,
+      })
+      return null
+    }
+    render(<EscapeHarness isPlaylistOpen={true} />)
+    act(() => press('Escape'))
+    expect(togglePlaylist).toHaveBeenCalledTimes(1)
+    expect(toggleFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('Escape falls back to exiting fullscreen when the playlist is already closed', () => {
+    const toggleFullscreen = vi.fn()
+    const togglePlaylist = vi.fn()
+    function EscapeHarness({ isPlaylistOpen }: { isPlaylistOpen: boolean }) {
+      useKeyboardShortcuts({
+        hasMedia: true,
+        volume: 100,
+        isFullscreen: true,
+        isPlaylistOpen,
+        togglePause: () => {},
+        toggleFullscreen,
+        toggleSubtitles: () => {},
+        toggleMotion: () => {},
+        playNext: () => {},
+        playPrevious: () => {},
+        togglePlaylist,
+      })
+      return null
+    }
+    render(<EscapeHarness isPlaylistOpen={false} />)
+    act(() => press('Escape'))
+    expect(toggleFullscreen).toHaveBeenCalledTimes(1)
+    expect(togglePlaylist).not.toHaveBeenCalled()
   })
 })

@@ -22,11 +22,17 @@ function basename(path: string): string {
 export function usePlaylist(opts: {
   ready: boolean
   loadFile: (path: string) => Promise<void>
+  // True while the player is loading a file: an end-file event landing during
+  // a load switch comes from the outgoing file, not a natural EOF, and must
+  // not trigger an auto-advance that would race the load in flight.
+  loadInFlightRef?: { current: boolean }
   onError: (msg: string) => void
 }) {
   const [queue, setQueue] = useState<PlaylistItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(-1)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [shuffle, setShuffle] = useState(false)
+  const [repeat, setRepeat] = useState(false)
 
   // Refs mirroring state so the once-attached end-file listener sees fresh
   // values without re-subscribing on every queue change.
@@ -34,6 +40,10 @@ export function usePlaylist(opts: {
   const indexRef = useRef(-1)
   queueRef.current = queue
   indexRef.current = currentIndex
+  const shuffleRef = useRef(false)
+  const repeatRef = useRef(false)
+  shuffleRef.current = shuffle
+  repeatRef.current = repeat
 
   // loadFile is stable (memoized with [resume] in usePlayer), but mirroring
   // it in a ref keeps playIndex itself identity-stable so the end-file
@@ -73,8 +83,20 @@ export function usePlaylist(opts: {
     // "next" would compute index 0 and jump to an arbitrary file, so stay
     // put until the user picks something explicit.
     if (indexRef.current === -1) return
+    const len = queueRef.current.length
+    if (len === 0) return
+    if (shuffleRef.current && len > 1) {
+      // Pick a random index other than the current one.
+      let next = indexRef.current
+      while (next === indexRef.current) {
+        next = Math.floor(Math.random() * len)
+      }
+      void playIndex(next)
+      return
+    }
     const next = indexRef.current + 1
-    if (next < queueRef.current.length) void playIndex(next)
+    if (next < len) void playIndex(next)
+    else if (repeatRef.current) void playIndex(0)
   }, [playIndex])
 
   const playPrevious = useCallback(() => {
@@ -108,6 +130,7 @@ export function usePlaylist(opts: {
     ;(async () => {
       try {
         unlisten = await listen<{ reason?: string }>('end-file', (event) => {
+          if (opts.loadInFlightRef?.current) return
           if (event.payload?.reason === 'eof') playNext()
         })
       } catch (e) {
@@ -134,11 +157,18 @@ export function usePlaylist(opts: {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: queue position only
   }, [opts.ready, queue.length, currentIndex])
 
+  const toggleShuffle = useCallback(() => setShuffle((v) => !v), [])
+  const toggleRepeat = useCallback(() => setRepeat((v) => !v), [])
+
   return {
     queue,
     currentIndex,
     panelOpen,
     setPanelOpen,
+    shuffle,
+    repeat,
+    toggleShuffle,
+    toggleRepeat,
     append,
     playIndex,
     playNext,

@@ -24,6 +24,7 @@ export function useKeyboardShortcuts(opts: {
   hasMedia: boolean
   volume: number
   isFullscreen: boolean
+  isPlaylistOpen: boolean
   togglePause: () => void
   toggleFullscreen: () => void
   toggleSubtitles: () => void
@@ -50,11 +51,15 @@ export function useKeyboardShortcuts(opts: {
           if (opts.hasMedia) opts.togglePause()
           break
         case 'f':
-          e.preventDefault()
-          opts.toggleFullscreen()
+          if (opts.hasMedia) {
+            e.preventDefault()
+            opts.toggleFullscreen()
+          }
           break
         case 'Escape':
-          if (opts.isFullscreen) opts.toggleFullscreen()
+          // Close the topmost layer first: the queue panel, then fullscreen.
+          if (opts.isPlaylistOpen) opts.togglePlaylist()
+          else if (opts.isFullscreen) opts.toggleFullscreen()
           break
         case 'ArrowRight':
           if (opts.hasMedia) {
