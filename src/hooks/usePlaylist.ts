@@ -22,6 +22,10 @@ function basename(path: string): string {
 export function usePlaylist(opts: {
   ready: boolean
   loadFile: (path: string) => Promise<void>
+  // True while the player is loading a file: an end-file event landing during
+  // a load switch comes from the outgoing file, not a natural EOF, and must
+  // not trigger an auto-advance that would race the load in flight.
+  loadInFlightRef?: { current: boolean }
   onError: (msg: string) => void
 }) {
   const [queue, setQueue] = useState<PlaylistItem[]>([])
@@ -126,6 +130,7 @@ export function usePlaylist(opts: {
     ;(async () => {
       try {
         unlisten = await listen<{ reason?: string }>('end-file', (event) => {
+          if (opts.loadInFlightRef?.current) return
           if (event.payload?.reason === 'eof') playNext()
         })
       } catch (e) {

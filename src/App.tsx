@@ -33,6 +33,7 @@ function App() {
   const playlist = usePlaylist({
     ready: player.ready,
     loadFile: player.loadFile,
+    loadInFlightRef: player.loadInFlightRef,
     onError,
   })
   useFileAssociation({

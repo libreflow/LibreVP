@@ -33,6 +33,7 @@ export interface PlayerState {
 
 export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) => void): PlayerState & {
   loadFile: (path: string) => Promise<void>
+  loadInFlightRef: React.MutableRefObject<boolean>
   seekingRef: React.MutableRefObject<boolean>
   readyRef: React.MutableRefObject<boolean>
   setTimePos: (t: number) => void
@@ -170,7 +171,7 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
     void setVideoMarginRatio({ bottom: showControls ? CONTROLS_MARGIN_RATIO : 0 })
   }, [ready, showControls])
 
-  const loadFile = useCallback(async (path: string) => {
+  const loadFileInner = useCallback(async (path: string) => {
     setError(null)
     // Grab the outgoing file's resume state synchronously, BEFORE loadfile:
     // the old file keeps emitting time-pos/pause events for as long as the
@@ -233,6 +234,28 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
     }
   }, [resume])
 
+  // Serializes loadFile calls: two concurrent loadfile commands against the
+  // same mpv instance (e.g. a double-clicked file arriving while an EOF
+  // auto-advance is still loading) crash the native player. Every load
+  // chains behind the previous one; a failed load still lets the next run.
+  const loadChainRef = useRef<Promise<void>>(Promise.resolve())
+  const loadInFlightRef = useRef(false)
+
+  const loadFile = useCallback((path: string) => {
+    const run = loadChainRef.current.then(async () => {
+      loadInFlightRef.current = true
+      try {
+        await loadFileInner(path)
+      } finally {
+        loadInFlightRef.current = false
+      }
+    })
+    // Keep the chain alive even when a load fails (unhandled rejections
+    // would both log noise and kill the chain).
+    loadChainRef.current = run.catch(() => {})
+    return run
+  }, [loadFileInner])
+
   const togglePause = useCallback(() => {
     const next = !pausedRef.current
     pausedRef.current = next
@@ -254,6 +277,7 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
     duration,
     volume,
     loadFile,
+    loadInFlightRef,
     seekingRef,
     readyRef,
     setTimePos,
