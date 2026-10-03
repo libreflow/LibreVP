@@ -42,16 +42,56 @@ export async function findSidecarSubtitle(videoPath: string): Promise<string | n
   return null
 }
 
+// A playable track as reported by mpv's track-list (embedded or sidecar).
+export interface MpvTrack {
+  id: number
+  type: 'sub' | 'audio'
+  title?: string
+  lang?: string
+  selected: boolean
+}
+
+function asTrackList(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(
+    (t): t is Record<string, unknown> => typeof t === 'object' && t !== null,
+  )
+}
+
+async function getTracks(): Promise<MpvTrack[]> {
+  const raw = await getProperty('track-list', 'node')
+  return asTrackList(raw)
+    .filter((t) => t.type === 'sub' || t.type === 'audio')
+    .map((t) => ({
+      id: Number(t.id),
+      type: t.type as 'sub' | 'audio',
+      ...(typeof t.title === 'string' && { title: t.title }),
+      ...(typeof t.lang === 'string' && { lang: t.lang }),
+      selected: t.selected === true,
+    }))
+}
+
+export async function subtitleTracks(): Promise<MpvTrack[]> {
+  return (await getTracks()).filter((t) => t.type === 'sub')
+}
+
+export async function audioTracks(): Promise<MpvTrack[]> {
+  return (await getTracks()).filter((t) => t.type === 'audio')
+}
+
 // Counts the container's embedded subtitle tracks via mpv's track-list.
 // track-list/count can't be used here: it totals video + audio + sub tracks
 // and is therefore non-zero for every playable file.
 export async function countSubtitleTracks(): Promise<number> {
-  const tracks = await getProperty('track-list', 'node')
-  if (!Array.isArray(tracks)) return 0
-  return tracks.filter(
-    (t): t is Record<string, unknown> =>
-      typeof t === 'object' && t !== null && t.type === 'sub',
-  ).length
+  return (await subtitleTracks()).length
+}
+
+export async function setSubtitleTrack(id: number | 'no'): Promise<void> {
+  await setProperty('sid', id)
+}
+
+export async function setAudioTrack(id: number): Promise<void> {
+  await setProperty('aid', id)
 }
 
 export async function isSubtitleVisible(): Promise<boolean> {
