@@ -69,11 +69,16 @@ export function usePlaylist(opts: {
   )
 
   const playNext = useCallback(() => {
+    // currentIndex -1 means the playing item was removed from the queue:
+    // "next" would compute index 0 and jump to an arbitrary file, so stay
+    // put until the user picks something explicit.
+    if (indexRef.current === -1) return
     const next = indexRef.current + 1
     if (next < queueRef.current.length) void playIndex(next)
   }, [playIndex])
 
   const playPrevious = useCallback(() => {
+    if (indexRef.current === -1) return
     if (indexRef.current > 0) void playIndex(indexRef.current - 1)
   }, [playIndex])
 
@@ -116,13 +121,18 @@ export function usePlaylist(opts: {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: playNext reads refs and is stable
   }, [opts.ready, playNext])
 
-  // Keep mpv's keep-open consistent with queue presence: with a queue,
-  // auto-advance handles EOF so keep-open must not pause at the end.
+  // Keep mpv's keep-open consistent with playback position in the queue:
+  // auto-advance handles EOF when there IS a next item, so keep-open must
+  // not hold the last frame; otherwise hold it. Keyed on "has a next" rather
+  // than queue length: a 2-file queue playing the second (last) item would
+  // otherwise hit EOF with keep-open='no' and show a black window instead
+  // of the frozen final frame.
   useEffect(() => {
     if (!opts.ready) return
-    void command('set_property', ['keep-open', queue.length > 1 ? 'no' : 'always'])
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: queue length only
-  }, [opts.ready, queue.length])
+    const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1
+    void command('set_property', ['keep-open', hasNext ? 'no' : 'always'])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: queue position only
+  }, [opts.ready, queue.length, currentIndex])
 
   return {
     queue,

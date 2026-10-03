@@ -13,7 +13,7 @@ interface PlaylistPanelProps {
 export function PlaylistPanel({ open, queue, currentIndex, onPlay, onRemove, onClear, onClose }: PlaylistPanelProps) {
   if (!open) return null
   return (
-    <div className="playlist-panel" onClick={(e) => e.stopPropagation()}>
+    <div className="playlist-panel" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
       <div className="playlist-panel__header">
         <span className="playlist-panel__title">File d'attente ({queue.length})</span>
         <button type="button" className="icon-btn" aria-label="Vider la file" onClick={onClear}>

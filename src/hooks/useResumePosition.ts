@@ -36,17 +36,21 @@ export function useResumePosition(ready: boolean) {
     await saveResumePosition(path, timePos, duration ?? 0)
   }, [])
 
-  // Reset tracking state when a new file is loaded. Grab the outgoing
-  // state synchronously: waiting for the checkpoint's write to complete
-  // before clearing let a time-pos event from the NEW file land in the
-  // OLD file's entry (and vice versa) -- the reset must take effect
-  // immediately, while the save runs in the background on its own copy.
-  const onFileChange = useCallback((path: string) => {
+  // Split file-change handling in two so the mpv event window during
+  // loadfile is airtight: the old file keeps emitting time-pos/pause
+  // events until the new one actually starts, so tracking must keep
+  // pointing at the OLD path for that whole duration. Saving the outgoing
+  // position happens up front (on its own copy, in the background); the
+  // tracking reset to the new path only once loadfile has succeeded.
+  const onFileChangeOutgoing = useCallback(() => {
     const outgoing = stateRef.current
-    stateRef.current = { path, timePos: null, duration: null }
     const { path: oldPath, timePos, duration } = outgoing
     if (!oldPath || timePos == null) return
     void saveResumePosition(oldPath, timePos, duration ?? 0)
+  }, [])
+
+  const onFileChangeIncoming = useCallback((path: string) => {
+    stateRef.current = { path, timePos: null, duration: null }
   }, [])
 
   // Returns the remembered position for this path, or null.
@@ -77,5 +81,5 @@ export function useResumePosition(ready: boolean) {
     return () => unlisten?.()
   }, [ready, checkpoint])
 
-  return { track, checkpoint, onFileChange, resumeAt }
+  return { track, checkpoint, onFileChangeOutgoing, onFileChangeIncoming, resumeAt }
 }
