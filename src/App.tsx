@@ -117,6 +117,11 @@ function App() {
         subtitlesAvailable={subtitles.available}
         subtitlesVisible={subtitles.visible}
         onToggleSubtitles={() => void subtitles.toggle()}
+        subTracks={subtitles.subTracks}
+        audioTracks={subtitles.audioTracks}
+        onSelectSubtrack={(id) => void subtitles.selectSubtrack(id)}
+        onDisableSubtitles={() => void subtitles.disableSubtitles()}
+        onSelectAudioTrack={(id) => void subtitles.selectAudioTrack(id)}
         motionEnabled={motion.enabled}
         onToggleMotion={() => void motion.toggle()}
         hasNext={playlist.currentIndex < playlist.queue.length - 1}
