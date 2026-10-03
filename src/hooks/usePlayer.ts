@@ -143,11 +143,14 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
 
   const loadFile = useCallback(async (path: string) => {
     setError(null)
+    // Grab the outgoing file's resume state synchronously, BEFORE loadfile:
+    // the old file keeps emitting time-pos/pause events for as long as the
+    // switch takes, and tracking must still point at it until the new file
+    // actually starts. The actual tracking reset happens after loadfile
+    // succeeds -- resetting earlier let the old file's positions be saved
+    // under the new file's key (see the checkpoint in the observer).
+    await resume.onFileChangeOutgoing()
     try {
-      // Checkpoint whatever was playing before switching away from it --
-      // otherwise navigating to a new file without ever pausing the
-      // previous one would silently lose its resume position.
-      await resume.onFileChange(path)
       const previousPath = currentPathRef.current
       currentPathRef.current = path
       try {
@@ -158,6 +161,13 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
         currentPathRef.current = previousPath
         throw e
       }
+      // The new file owns the tracking from here on.
+      resume.onFileChangeIncoming(path)
+      // Observed properties only fire on CHANGE -- without this reset the
+      // seek bar kept showing the previous file's duration/position until
+      // the new file's first events landed.
+      setDuration(null)
+      setTimePos(null)
       // mpv starts playback automatically on loadfile; read the REAL state
       // back instead of assuming one, since observeProperties only fires on
       // CHANGE and never emits if our guess already matched reality.
@@ -176,6 +186,9 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
       onFileLoadedRef.current?.(path)
     } catch (e) {
       setError(`Impossible de lire ce fichier : ${String(e)}`)
+      // Re-throw so callers (playlist playIndex) can detect the failure;
+      // the UI error is already surfaced via setError above.
+      throw e
     }
   }, [resume])
 

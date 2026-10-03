@@ -36,7 +36,7 @@ export function Controls(props: ControlsProps) {
     onSeekChange, onSeekCommit, seekingRef, timePos, duration,
   } = props
   return (
-    <div className="controls" onClick={(e) => e.stopPropagation()}>
+    <div className="controls" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
       <SeekBar
         timePos={timePos}
         duration={duration}
