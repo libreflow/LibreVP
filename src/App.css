@@ -204,6 +204,10 @@
   height: 18px;
 }
 
+.volume-icon {
+  padding: 2px;
+}
+
 .volume-row {
   display: flex;
   align-items: center;

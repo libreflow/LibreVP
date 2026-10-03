@@ -47,6 +47,7 @@ function App() {
     hasMedia,
     volume: player.volume,
     isFullscreen,
+    isPlaylistOpen: playlist.panelOpen,
     togglePause: player.togglePause,
     toggleFullscreen,
     toggleSubtitles: subtitles.toggle,
@@ -73,7 +74,7 @@ function App() {
     >
       {errorToDisplay && <div className="error-banner error-banner--overlay">{errorToDisplay}</div>}
       {isDragOver && (
-        <div className="drag-overlay">Déposer la vidéo pour la lire</div>
+        <div className="drag-overlay">Déposer un fichier vidéo pour le lire</div>
       )}
 
       {!hasMedia && (
@@ -98,6 +99,10 @@ function App() {
         open={playlist.panelOpen}
         queue={playlist.queue}
         currentIndex={playlist.currentIndex}
+        shuffle={playlist.shuffle}
+        repeat={playlist.repeat}
+        onToggleShuffle={playlist.toggleShuffle}
+        onToggleRepeat={playlist.toggleRepeat}
         onPlay={(i) => void playlist.playIndex(i)}
         onRemove={playlist.removeAt}
         onClear={playlist.clear}
