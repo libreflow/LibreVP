@@ -11,7 +11,7 @@ import {
 // common language tag) when a file is opened, and exposes a visible/hidden
 // toggle. If no sidecar exists, the toggle is a no-op (embedded tracks are
 // left to mpv's own defaults).
-export function useSubtitles() {
+export function useSubtitles(onError?: (msg: string) => void) {
   const [available, setAvailable] = useState(false)
   const [visible, setVisible] = useState(false)
   // The video path whose sidecar is currently loaded, so we don't re-add
@@ -47,18 +47,28 @@ export function useSubtitles() {
   }, [])
 
   const toggle = useCallback(async () => {
-    // setProperty('sub-visibility') never rejects (it's a plain mpv flag),
-    // so the old try/catch never caught the "no sub track" case and the
-    // button always ended up marked active. Check the real track count
-    // instead and no-op when there is nothing to toggle.
-    if ((await countSubtitleTracks()) === 0) return
-    // Prefer mpv's real state: if an embedded track is active, toggling
-    // visibility applies to it too, not just our sidecar.
-    const next = !(await isSubtitleVisible())
-    await setSubtitleVisible(next)
-    setVisible(next)
-    setAvailable(true)
-  }, [])
+    try {
+      // setProperty('sub-visibility') never rejects (it's a plain mpv flag),
+      // so the old try/catch never caught the "no sub track" case and the
+      // button always ended up marked active. Check the real track count
+      // instead and no-op when there is nothing to toggle.
+      if ((await countSubtitleTracks()) === 0) return
+      // Prefer mpv's real state: if an embedded track is active, toggling
+      // visibility applies to it too, not just our sidecar.
+      const next = !(await isSubtitleVisible())
+      await setSubtitleVisible(next)
+      setVisible(next)
+      setAvailable(true)
+    } catch (e) {
+      // Unlike the "no sub track" case above (a normal, silent no-op), a
+      // thrown error here means the mpv call itself failed (e.g. called too
+      // soon after startup, before mpv finished initializing) -- surface it
+      // like every other user-triggered action in the app (openFile,
+      // togglePause, motion.toggle, playlist ops) instead of letting an
+      // unhandled rejection escape from `void subtitles.toggle()` in App.tsx.
+      onError?.(`Sous-titres indisponibles : ${String(e)}`)
+    }
+  }, [onError])
 
   // Reset when the app starts (no file loaded yet).
   useEffect(() => () => {

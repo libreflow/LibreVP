@@ -13,11 +13,11 @@ import './App.css'
 
 function App() {
   const { showControls, onPointerActivity } = useControlsVisibility()
-  const subtitles = useSubtitles()
-  const player = usePlayer(showControls, (path) => void subtitles.onFileLoaded(path))
-  const motion = useMotionInterpolation(player.ready)
   const [error, setError] = useState<string | null>(null)
   const onError = useCallback((msg: string) => setError(msg), [])
+  const subtitles = useSubtitles(onError)
+  const player = usePlayer(showControls, (path) => void subtitles.onFileLoaded(path))
+  const motion = useMotionInterpolation(player.ready)
   const { isFullscreen, toggleFullscreen } = useFullscreen(onError)
   const { isDragOver, openFile } = useFilePicker({
     readyRef: player.readyRef,
