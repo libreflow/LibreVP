@@ -3,9 +3,23 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { command, setProperty } from 'tauri-plugin-libmpv-api'
 import { MAX_VOLUME } from '../utils'
 
-// Global keyboard shortcuts. Read current state via refs rather than
-// re-binding the listener on every state change (avoids churn and keeps
-// a single, stable keydown handler for the window's lifetime).
+// Global keyboard shortcuts. Read current state via a single ref mirroring
+// `opts` (updated every render, like useFileAssociation's optsRef) rather
+// than re-binding the listener when individual callbacks change identity --
+// this keeps a single, stable keydown handler for the window's lifetime
+// while still seeing fresh values/callbacks on every keypress.
+//
+// This used to depend on only [isFullscreen, volume, toggleFullscreen,
+// togglePause], which left toggleMotion/togglePlaylist (plain inline arrows
+// recreated every App render, not useCallback-memoized) captured by the
+// closure from whichever render last changed one of those four deps -- in
+// practice the very first render, since togglePause/toggleFullscreen are
+// stable and volume/isFullscreen only change on user action. Pressing 'm'
+// or 'l' a second time called a stale closure of toggleMotion/togglePlaylist,
+// which still read the ORIGINAL `enabled`/`panelOpen` value from that first
+// render and always computed the same "turn on" result -- so the shortcut
+// visibly worked once, then appeared frozen until some other opts field
+// happened to change and the effect re-subscribed.
 export function useKeyboardShortcuts(opts: {
   hasMedia: boolean
   volume: number
@@ -18,11 +32,12 @@ export function useKeyboardShortcuts(opts: {
   playPrevious: () => void
   togglePlaylist: () => void
 }) {
-  const hasMediaRef = useRef(false)
-  hasMediaRef.current = opts.hasMedia
+  const optsRef = useRef(opts)
+  optsRef.current = opts
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      const opts = optsRef.current
       // Don't hijack typing in a focused input (e.g. a future search box).
       if (e.target instanceof HTMLInputElement) return
       // Let Space activate a focused button natively instead of also firing
@@ -32,7 +47,7 @@ export function useKeyboardShortcuts(opts: {
         case ' ':
         case 'k':
           e.preventDefault()
-          if (hasMediaRef.current) opts.togglePause()
+          if (opts.hasMedia) opts.togglePause()
           break
         case 'f':
           e.preventDefault()
@@ -42,13 +57,13 @@ export function useKeyboardShortcuts(opts: {
           if (opts.isFullscreen) opts.toggleFullscreen()
           break
         case 'ArrowRight':
-          if (hasMediaRef.current) {
+          if (opts.hasMedia) {
             e.preventDefault()
             void command('seek', [5, 'relative'])
           }
           break
         case 'ArrowLeft':
-          if (hasMediaRef.current) {
+          if (opts.hasMedia) {
             e.preventDefault()
             void command('seek', [-5, 'relative'])
           }
@@ -62,24 +77,24 @@ export function useKeyboardShortcuts(opts: {
           void setProperty('volume', Math.max(0, opts.volume - 5))
           break
         case 's':
-          if (hasMediaRef.current) {
+          if (opts.hasMedia) {
             e.preventDefault()
             opts.toggleSubtitles()
           }
           break
         case 'm':
-          if (hasMediaRef.current) {
+          if (opts.hasMedia) {
             e.preventDefault()
             opts.toggleMotion()
           }
           break
         case 'n':
           e.preventDefault()
-          if (hasMediaRef.current) opts.playNext()
+          if (opts.hasMedia) opts.playNext()
           break
         case 'p':
           e.preventDefault()
-          if (hasMediaRef.current) opts.playPrevious()
+          if (opts.hasMedia) opts.playPrevious()
           break
         case 'l':
           e.preventDefault()
@@ -89,8 +104,10 @@ export function useKeyboardShortcuts(opts: {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: refs carry fresh values, volume/isFullscreen rebind only when they truly change
-  }, [opts.isFullscreen, opts.volume, opts.toggleFullscreen, opts.togglePause])
+    // Deps intentionally []: optsRef always carries the latest opts (every
+    // field, including callbacks of any stability), so the listener never
+    // needs to re-subscribe -- see the hook-level comment above.
+  }, [])
 }
 
 export function useFullscreen(onError: (msg: string) => void) {
