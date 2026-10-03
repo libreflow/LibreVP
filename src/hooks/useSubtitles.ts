@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getProperty } from 'tauri-plugin-libmpv-api'
 import {
   findSidecarSubtitle,
   isSubtitleVisible,
@@ -22,13 +23,18 @@ export function useSubtitles() {
       const sidecar = await findSidecarSubtitle(videoPath)
       if (loadedForRef.current !== videoPath) {
         loadedForRef.current = videoPath
-        setAvailable(sidecar != null)
         if (sidecar) {
+          setAvailable(true)
           await loadSubtitle(sidecar)
           await setSubtitleVisible(true)
           setVisible(true)
         } else {
-          setVisible(false)
+          // No sidecar, but the container may embed sub tracks (MKV, MP4...).
+          // Ask mpv for the real track count instead of reporting "none".
+          const trackCount = await getProperty('track-list/count', 'int64')
+          const hasSubs = trackCount != null && trackCount > 0
+          setAvailable(hasSubs)
+          setVisible(hasSubs ? await isSubtitleVisible() : false)
         }
       }
     } catch {

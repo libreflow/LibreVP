@@ -42,12 +42,16 @@ export function useKeyboardShortcuts(opts: {
           if (opts.isFullscreen) opts.toggleFullscreen()
           break
         case 'ArrowRight':
-          e.preventDefault()
-          void command('seek', [5, 'relative'])
+          if (hasMediaRef.current) {
+            e.preventDefault()
+            void command('seek', [5, 'relative'])
+          }
           break
         case 'ArrowLeft':
-          e.preventDefault()
-          void command('seek', [-5, 'relative'])
+          if (hasMediaRef.current) {
+            e.preventDefault()
+            void command('seek', [-5, 'relative'])
+          }
           break
         case 'ArrowUp':
           e.preventDefault()
@@ -58,20 +62,24 @@ export function useKeyboardShortcuts(opts: {
           void setProperty('volume', Math.max(0, opts.volume - 5))
           break
         case 's':
-          e.preventDefault()
-          opts.toggleSubtitles()
+          if (hasMediaRef.current) {
+            e.preventDefault()
+            opts.toggleSubtitles()
+          }
           break
         case 'm':
-          e.preventDefault()
-          opts.toggleMotion()
+          if (hasMediaRef.current) {
+            e.preventDefault()
+            opts.toggleMotion()
+          }
           break
         case 'n':
           e.preventDefault()
-          opts.playNext()
+          if (hasMediaRef.current) opts.playNext()
           break
         case 'p':
           e.preventDefault()
-          opts.playPrevious()
+          if (hasMediaRef.current) opts.playPrevious()
           break
         case 'l':
           e.preventDefault()

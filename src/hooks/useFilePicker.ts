@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-import { pickSupportedFile, VIDEO_EXTENSIONS } from '../utils'
+import { hasVideoExtension, pickSupportedFile, VIDEO_EXTENSIONS } from '../utils'
 
 // File picking via the native dialog + acceptance of files dropped onto the
 // window (native OS drag-drop, not the HTML5 DnD API — mpv's video surface
@@ -38,8 +38,12 @@ export function useFilePicker(opts: {
         if (event.payload.type === 'drop') {
           setIsDragOver(false)
           const paths = event.payload.paths
+          // Keep only actual video files: a subtitle or artwork file
+          // dropped alongside the movie must not enter the playback queue.
+          const videos = paths.filter(hasVideoExtension)
+          if (videos.length === 0) return
           if (opts.onFilesDropped) {
-            opts.onFilesDropped(paths)
+            opts.onFilesDropped(videos)
           } else {
             const path = pickSupportedFile(paths)
             if (path && opts.readyRef.current) void opts.loadFile(path)

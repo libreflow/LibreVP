@@ -25,7 +25,7 @@
     },
     {
       "identifier": "fs:allow-exists",
-      "allow": [{ "path": "$APPCONFIG" }, { "path": "$APPCONFIG/*" }]
+      "allow": [{ "path": "**" }]
     }
   ]
 }

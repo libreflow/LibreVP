@@ -48,12 +48,20 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
   const seekingRef = useRef(false)
   const readyRef = useRef(false)
   const pausedRef = useRef(true)
+  // Guards against StrictMode's double-mount racing two concurrent init()
+  // calls against an mpv instance that only tolerates one.
+  const initPromiseRef = useRef<Promise<unknown> | null>(null)
   // Full path of the currently loaded file, as passed to loadFile -- NOT
   // the same as `filename` (mpv's observed 'filename' property is just the
   // basename, which is ambiguous as a resume-map key across directories).
   const currentPathRef = useRef<string | null>(null)
 
   const resume = useResumePosition(ready)
+  // Keep the latest onFileLoaded callback reachable from the stable
+  // loadFile without re-creating loadFile (and the listeners that depend
+  // on its identity) on every render.
+  const onFileLoadedRef = useRef(onFileLoaded)
+  onFileLoadedRef.current = onFileLoaded
 
   // Initialize mpv once, embedded in this window.
   useEffect(() => {
@@ -62,15 +70,20 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
 
     ;(async () => {
       try {
-        await init({
-          initialOptions: {
-            vo: 'gpu-next',
-            hwdec: 'auto-safe',
-            'keep-open': 'yes',
-            'force-window': 'yes',
-          },
-          observedProperties: OBSERVED_PROPERTIES,
-        })
+        // Reuse the in-flight (or completed) init across StrictMode's
+        // unmount/remount cycle instead of calling init() twice.
+        if (!initPromiseRef.current) {
+          initPromiseRef.current = init({
+            initialOptions: {
+              vo: 'gpu-next',
+              hwdec: 'auto-safe',
+              'keep-open': 'always',
+              'force-window': 'yes',
+            },
+            observedProperties: OBSERVED_PROPERTIES,
+          })
+        }
+        await initPromiseRef.current
         if (cancelled) return
         unlisten = await observeProperties(OBSERVED_PROPERTIES, (event) => {
           switch (event.name) {
@@ -135,8 +148,16 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
       // otherwise navigating to a new file without ever pausing the
       // previous one would silently lose its resume position.
       await resume.onFileChange(path)
+      const previousPath = currentPathRef.current
       currentPathRef.current = path
-      await command('loadfile', [path])
+      try {
+        await command('loadfile', [path])
+      } catch (e) {
+        // Restore the previous file's tracking on failure so the seek/resume
+        // logic doesn't point at a file that never actually loaded.
+        currentPathRef.current = previousPath
+        throw e
+      }
       // mpv starts playback automatically on loadfile; read the REAL state
       // back instead of assuming one, since observeProperties only fires on
       // CHANGE and never emits if our guess already matched reality.
@@ -152,11 +173,11 @@ export function usePlayer(showControls: boolean, onFileLoaded?: (path: string) =
         resume.track({ timePos: resumeAt })
         setTimePos(resumeAt)
       }
-      onFileLoaded?.(path)
+      onFileLoadedRef.current?.(path)
     } catch (e) {
       setError(`Impossible de lire ce fichier : ${String(e)}`)
     }
-  }, [resume, onFileLoaded])
+  }, [resume])
 
   const togglePause = useCallback(() => {
     const next = !pausedRef.current
