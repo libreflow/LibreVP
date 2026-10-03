@@ -15,6 +15,17 @@ import { describe, expect, it, vi } from 'vitest'
 // a scalar mpv property (string/int64/flag) that goes through a different,
 // unaffected native code path. This test pins that contract: it fails
 // loudly if `getProperty` is ever called with the 'node' format again.
+const setPropertyMock = vi.hoisted(() =>
+  vi.fn(async (name: string, value: unknown) => {
+    if ((name === 'aid' || name === 'sid') && typeof value === 'number') {
+      throw new Error(
+        `Set Property failed for window 'main': Failed to set property: ` +
+          `Failed to set property '${name}': error accessing property`,
+      )
+    }
+  }),
+)
+
 const getPropertyMock = vi.hoisted(() =>
   vi.fn(async (name: string, format: string) => {
     if (format === 'node') {
@@ -44,14 +55,23 @@ const getPropertyMock = vi.hoisted(() =>
 
 vi.mock('tauri-plugin-libmpv-api', () => ({
   getProperty: getPropertyMock,
-  setProperty: vi.fn(async () => {}),
+  // Mirrors the real native wrapper's behavior: mpv's aid/sid properties
+  // are MPV_FORMAT_STRING (accepted values: "<ID>", "auto", "no" -- see
+  // mpv's --aid/--sid docs), even though the ID is numeric. The old
+  // setAudioTrack/setSubtitleTrack passed a JS `number`, which TypeScript
+  // accepted (setProperty's signature is string | boolean | number) but
+  // the real DLL rejected at runtime with "error accessing property" --
+  // an unhandled rejection that silently no-op'd every track switch. A
+  // permissive mock here would have hidden this exact bug, like the one
+  // it replaces did.
+  setProperty: setPropertyMock,
   command: vi.fn(async () => {}),
 }))
 vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: vi.fn(async () => false),
 }))
 
-import { audioTracks, countSubtitleTracks, subtitleTracks } from './subtitles'
+import { audioTracks, countSubtitleTracks, setAudioTrack, setSubtitleTrack, subtitleTracks } from './subtitles'
 
 describe('subtitles track-list reading', () => {
   it('never queries track-list with the node format', async () => {
@@ -84,5 +104,31 @@ describe('subtitles track-list reading', () => {
       throw new Error('mpv not initialized: no active window')
     })
     await expect(subtitleTracks()).rejects.toThrow('mpv not initialized')
+  })
+})
+
+// Regression test: setAudioTrack/setSubtitleTrack used to pass the track ID
+// to setProperty as a JS number. mpv's aid/sid properties are
+// MPV_FORMAT_STRING (accepted values: "<ID>", "auto", "no"), so the real
+// native wrapper rejected the numeric form at runtime with "error accessing
+// property" -- silently, because neither call was awaited with a catch
+// anywhere in the call chain (App.tsx uses `void subtitles.selectAudioTrack
+// (id)`). Confirmed live via CDP against the packaged app: clicking any
+// non-default track in the audio/subtitle menu visibly closed the menu
+// (the UI reacted) but mpv's real `aid`/`sid` property never changed.
+describe('subtitles track selection sends the ID as a string', () => {
+  it('setAudioTrack sends aid as a string, not a number', async () => {
+    await setAudioTrack(2)
+    expect(setPropertyMock).toHaveBeenCalledWith('aid', '2')
+  })
+
+  it('setSubtitleTrack sends sid as a string when given a numeric ID', async () => {
+    await setSubtitleTrack(3)
+    expect(setPropertyMock).toHaveBeenCalledWith('sid', '3')
+  })
+
+  it('setSubtitleTrack passes "no" through unchanged (mpv\'s disable sentinel)', async () => {
+    await setSubtitleTrack('no')
+    expect(setPropertyMock).toHaveBeenCalledWith('sid', 'no')
   })
 })

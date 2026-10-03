@@ -94,22 +94,37 @@ export function useSubtitles(onError?: (msg: string) => void) {
   }, [])
 
   const selectSubtrack = useCallback(async (id: number) => {
-    await setSubtitleTrack(id)
-    setVisible(true)
-    setAvailable(true)
-    void refreshTracks()
-  }, [refreshTracks])
+    try {
+      await setSubtitleTrack(id)
+      setVisible(true)
+      setAvailable(true)
+      void refreshTracks()
+    } catch (e) {
+      // Same reasoning as toggle() above: a user-triggered action must
+      // surface its failure via onError, not escape as an unhandled
+      // rejection from `void subtitles.selectSubtrack(id)` in App.tsx.
+      onError?.(`Sélection du sous-titre impossible : ${String(e)}`)
+    }
+  }, [refreshTracks, onError])
 
   const disableSubtitles = useCallback(async () => {
-    await setSubtitleTrack('no')
-    setVisible(false)
-    void refreshTracks()
-  }, [refreshTracks])
+    try {
+      await setSubtitleTrack('no')
+      setVisible(false)
+      void refreshTracks()
+    } catch (e) {
+      onError?.(`Désactivation des sous-titres impossible : ${String(e)}`)
+    }
+  }, [refreshTracks, onError])
 
   const selectAudioTrack = useCallback(async (id: number) => {
-    await setAudioTrack(id)
-    void refreshTracks()
-  }, [refreshTracks])
+    try {
+      await setAudioTrack(id)
+      void refreshTracks()
+    } catch (e) {
+      onError?.(`Sélection de la piste audio impossible : ${String(e)}`)
+    }
+  }, [refreshTracks, onError])
 
   return {
     available,

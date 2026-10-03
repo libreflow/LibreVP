@@ -112,12 +112,19 @@ export async function countSubtitleTracks(): Promise<number> {
   return (await subtitleTracks()).length
 }
 
+// mpv's aid/sid properties are MPV_FORMAT_STRING under the hood (accepted
+// values are "<ID>", "auto" or "no" -- see mpv's --aid/--sid docs), even
+// though the ID itself is numeric. Passing a JS number lets TypeScript
+// compile fine (setProperty accepts string | boolean | number) but the
+// native wrapper rejects it at runtime ("error accessing property"),
+// silently no-op'ing track selection (the failure was an unhandled
+// rejection nobody awaited). Always send the numeric ID as a string.
 export async function setSubtitleTrack(id: number | 'no'): Promise<void> {
-  await setProperty('sid', id)
+  await setProperty('sid', String(id))
 }
 
 export async function setAudioTrack(id: number): Promise<void> {
-  await setProperty('aid', id)
+  await setProperty('aid', String(id))
 }
 
 export async function isSubtitleVisible(): Promise<boolean> {
