@@ -9,10 +9,13 @@ const SETTINGS_FILE_NAME = 'settings.json'
 export interface Settings {
   /** Smooth-motion interpolation (mpv `interpolation` + display-resync). */
   motionInterpolation: boolean
+  /** Last used volume (0-130), restored on startup. */
+  volume: number
 }
 
 const DEFAULTS: Settings = {
   motionInterpolation: false,
+  volume: 100,
 }
 
 let cachedPath: string | null = null
@@ -50,4 +53,10 @@ export async function saveSettings(settings: Settings): Promise<void> {
   } catch {
     // Disk full, permission error, etc. -- silently skip.
   }
+}
+
+// Merge-style update: persists a partial change without clobbering the
+// keys the caller didn't touch (saveSettings writes the whole file).
+export async function updateSettings(patch: Partial<Settings>): Promise<void> {
+  await saveSettings({ ...(await loadSettings()), ...patch })
 }

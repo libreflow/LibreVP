@@ -33,6 +33,7 @@ function App() {
   const playlist = usePlaylist({
     ready: player.ready,
     loadFile: player.loadFile,
+    loadInFlightRef: player.loadInFlightRef,
     onError,
   })
   useFileAssociation({
@@ -47,6 +48,7 @@ function App() {
     hasMedia,
     volume: player.volume,
     isFullscreen,
+    isPlaylistOpen: playlist.panelOpen,
     togglePause: player.togglePause,
     toggleFullscreen,
     toggleSubtitles: subtitles.toggle,
@@ -73,7 +75,7 @@ function App() {
     >
       {errorToDisplay && <div className="error-banner error-banner--overlay">{errorToDisplay}</div>}
       {isDragOver && (
-        <div className="drag-overlay">Déposer la vidéo pour la lire</div>
+        <div className="drag-overlay">Déposer un fichier vidéo pour le lire</div>
       )}
 
       {!hasMedia && (
@@ -98,6 +100,10 @@ function App() {
         open={playlist.panelOpen}
         queue={playlist.queue}
         currentIndex={playlist.currentIndex}
+        shuffle={playlist.shuffle}
+        repeat={playlist.repeat}
+        onToggleShuffle={playlist.toggleShuffle}
+        onToggleRepeat={playlist.toggleRepeat}
         onPlay={(i) => void playlist.playIndex(i)}
         onRemove={playlist.removeAt}
         onClear={playlist.clear}
@@ -112,6 +118,11 @@ function App() {
         subtitlesAvailable={subtitles.available}
         subtitlesVisible={subtitles.visible}
         onToggleSubtitles={() => void subtitles.toggle()}
+        subTracks={subtitles.subTracks}
+        audioTracks={subtitles.audioTracks}
+        onSelectSubtrack={(id) => void subtitles.selectSubtrack(id)}
+        onDisableSubtitles={() => void subtitles.disableSubtitles()}
+        onSelectAudioTrack={(id) => void subtitles.selectAudioTrack(id)}
         motionEnabled={motion.enabled}
         onToggleMotion={() => void motion.toggle()}
         hasNext={playlist.currentIndex < playlist.queue.length - 1}

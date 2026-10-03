@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  audioTracks,
   countSubtitleTracks,
   findSidecarSubtitle,
   isSubtitleVisible,
   loadSubtitle,
+  setAudioTrack,
+  setSubtitleTrack,
   setSubtitleVisible,
+  subtitleTracks,
+  type MpvTrack,
 } from '../subtitles'
 
 // Auto-loads a sidecar subtitle file (same name as the video, or with a
@@ -14,9 +19,21 @@ import {
 export function useSubtitles() {
   const [available, setAvailable] = useState(false)
   const [visible, setVisible] = useState(false)
+  const [subTracks, setSubTracks] = useState<MpvTrack[]>([])
+  const [audio, setAudio] = useState<MpvTrack[]>([])
   // The video path whose sidecar is currently loaded, so we don't re-add
   // the same sub track when the user merely toggles visibility.
   const loadedForRef = useRef<string | null>(null)
+
+  // Refresh the track lists (sub + audio) for the currently loaded file.
+  const refreshTracks = useCallback(async () => {
+    try {
+      setSubTracks(await subtitleTracks())
+      setAudio(await audioTracks())
+    } catch {
+      // Track listing is best-effort (e.g. no file loaded yet).
+    }
+  }, [])
 
   const onFileLoaded = useCallback(async (videoPath: string) => {
     try {
@@ -38,13 +55,14 @@ export function useSubtitles() {
           setVisible(subCount > 0 ? await isSubtitleVisible() : false)
         }
       }
+      await refreshTracks()
     } catch {
       // Subtitle discovery is best-effort; never block playback on it.
       setAvailable(false)
       setVisible(false)
       loadedForRef.current = videoPath
     }
-  }, [])
+  }, [refreshTracks])
 
   const toggle = useCallback(async () => {
     // setProperty('sub-visibility') never rejects (it's a plain mpv flag),
@@ -65,5 +83,33 @@ export function useSubtitles() {
     loadedForRef.current = null
   }, [])
 
-  return { available, visible, onFileLoaded, toggle }
+  const selectSubtrack = useCallback(async (id: number) => {
+    await setSubtitleTrack(id)
+    setVisible(true)
+    setAvailable(true)
+    void refreshTracks()
+  }, [refreshTracks])
+
+  const disableSubtitles = useCallback(async () => {
+    await setSubtitleTrack('no')
+    setVisible(false)
+    void refreshTracks()
+  }, [refreshTracks])
+
+  const selectAudioTrack = useCallback(async (id: number) => {
+    await setAudioTrack(id)
+    void refreshTracks()
+  }, [refreshTracks])
+
+  return {
+    available,
+    visible,
+    subTracks,
+    audioTracks: audio,
+    onFileLoaded,
+    toggle,
+    selectSubtrack,
+    disableSubtitles,
+    selectAudioTrack,
+  }
 }

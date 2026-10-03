@@ -1,5 +1,7 @@
 import { SeekBar } from './controls/SeekBar'
 import { VolumeControl } from './controls/VolumeControl'
+import { TrackMenu } from './controls/TrackMenu'
+import type { MpvTrack } from '../subtitles'
 
 interface ControlsProps {
   paused: boolean
@@ -13,6 +15,11 @@ interface ControlsProps {
   hasPrevious: boolean
   onToggleSubtitles: () => void
   onToggleMotion: () => void
+  subTracks: MpvTrack[]
+  audioTracks: MpvTrack[]
+  onSelectSubtrack: (id: number) => void
+  onDisableSubtitles: () => void
+  onSelectAudioTrack: (id: number) => void
   onPlayNext: () => void
   onPlayPrevious: () => void
   onOpenFile: () => void
@@ -32,6 +39,7 @@ export function Controls(props: ControlsProps) {
     paused, volume, filename, isFullscreen,
     subtitlesAvailable, subtitlesVisible, motionEnabled, hasNext, hasPrevious,
     onToggleSubtitles, onToggleMotion, onPlayNext, onPlayPrevious, onOpenFile, onTogglePlaylist,
+    subTracks, audioTracks, onSelectSubtrack, onDisableSubtitles, onSelectAudioTrack,
     togglePause, toggleFullscreen, setVolume,
     onSeekChange, onSeekCommit, seekingRef, timePos, duration,
   } = props
@@ -59,6 +67,19 @@ export function Controls(props: ControlsProps) {
         <button type="button" className="icon-btn" disabled={!hasNext} onClick={onPlayNext} aria-label="Piste suivante">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6l8.5 6L6 18V6zm10 0h2v12h-2z" /></svg>
         </button>
+        <TrackMenu
+          label="Pistes audio"
+          tracks={audioTracks}
+          onSelect={onSelectAudioTrack}
+          disabledSelected={false}
+        />
+        <TrackMenu
+          label="Sous-titres"
+          tracks={subTracks}
+          onSelect={onSelectSubtrack}
+          onDisable={onDisableSubtitles}
+          disabledSelected={!subTracks.some((t) => t.selected)}
+        />
         <VolumeControl volume={volume} setVolume={setVolume} />
         <button
           type="button"
