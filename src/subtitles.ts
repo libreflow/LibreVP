@@ -1,5 +1,5 @@
 import { exists } from '@tauri-apps/plugin-fs'
-import { command, getProperty, setProperty } from 'tauri-plugin-libmpv-api'
+import { command, getProperty, setProperty, type MpvFormat } from 'tauri-plugin-libmpv-api'
 
 // Subtitle extensions mpv can load as external sidecar files.
 export const SUBTITLE_EXTENSIONS = ['srt', 'ass', 'ssa', 'vtt', 'sub', 'idx']
@@ -51,24 +51,50 @@ export interface MpvTrack {
   selected: boolean
 }
 
-function asTrackList(value: unknown): Record<string, unknown>[] {
-  if (!Array.isArray(value)) return []
-  return value.filter(
-    (t): t is Record<string, unknown> => typeof t === 'object' && t !== null,
-  )
+// NOTE: getProperty(name, 'node') on 'track-list' is deliberately never
+// used here. On at least one real-world setup it reliably segfaults inside
+// the native libmpv-wrapper DLL (mpv_wrapper_get_property, out-of-bounds
+// array read) when decoding the nested node structure for files with
+// several tracks -- reproduced consistently with a multi-track 4K HDR MKV.
+// Every sub-field below is a scalar mpv property (string/int64/flag), which
+// goes through a different, unaffected native code path. One extra IPC
+// round-trip per field is the price for not crashing the whole app.
+async function getTrackField<T>(index: number, field: string, format: MpvFormat): Promise<T | undefined> {
+  try {
+    return await getProperty<T>(`track-list/${index}/${field}`, format)
+  } catch {
+    // Missing/inapplicable sub-field (e.g. no title) -- not a real error.
+    return undefined
+  }
 }
 
 async function getTracks(): Promise<MpvTrack[]> {
-  const raw = await getProperty('track-list', 'node')
-  return asTrackList(raw)
-    .filter((t) => t.type === 'sub' || t.type === 'audio')
-    .map((t) => ({
-      id: Number(t.id),
-      type: t.type as 'sub' | 'audio',
-      ...(typeof t.title === 'string' && { title: t.title }),
-      ...(typeof t.lang === 'string' && { lang: t.lang }),
-      selected: t.selected === true,
-    }))
+  // No try/catch here: propagate errors (e.g. mpv not ready yet) exactly
+  // like the old `getProperty('track-list', 'node')` call did. Callers
+  // already handle this at the right layer -- useSubtitles.refreshTracks
+  // treats listing as best-effort (silent), while toggle() surfaces it via
+  // onError. Swallowing it here would silently turn "mpv isn't ready" into
+  // "this file has 0 tracks", which made toggle() wrongly no-op instead of
+  // reporting the real error.
+  const count = (await getProperty<number>('track-list/count', 'int64')) ?? 0
+  const tracks: MpvTrack[] = []
+  for (let i = 0; i < count; i++) {
+    const type = await getTrackField<string>(i, 'type', 'string')
+    if (type !== 'sub' && type !== 'audio') continue
+    const id = await getTrackField<number>(i, 'id', 'int64')
+    if (id === undefined) continue
+    const title = await getTrackField<string>(i, 'title', 'string')
+    const lang = await getTrackField<string>(i, 'lang', 'string')
+    const selected = await getTrackField<boolean>(i, 'selected', 'flag')
+    tracks.push({
+      id,
+      type,
+      ...(title !== undefined && { title }),
+      ...(lang !== undefined && { lang }),
+      selected: selected === true,
+    })
+  }
+  return tracks
 }
 
 export async function subtitleTracks(): Promise<MpvTrack[]> {
